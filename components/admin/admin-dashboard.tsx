@@ -16,7 +16,10 @@ import {
   ChevronLeft,
   ChevronRight,
   UserCheck,
-  UserX
+  UserX,
+  Shield,
+  FileText,
+  Eye
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -39,6 +42,30 @@ type Booking = {
   status: string
   created_at: string
   user_id: string | null
+}
+
+type VaccinationRecord = {
+  id: string
+  vaccine_name: string
+  date_administered: string
+  expiration_date: string | null
+  document_pathname: string | null
+  verified: boolean
+  verified_by: string | null
+  verified_at: string | null
+}
+
+type Pet = {
+  id: string
+  user_id: string
+  name: string
+  breed: string | null
+  age_years: number | null
+  weight_lbs: number | null
+  size: string | null
+  profile_image_url: string | null
+  vaccination_records: VaccinationRecord[]
+  users?: { email: string }
 }
 
 const serviceLabels: Record<string, string> = {
@@ -166,11 +193,16 @@ function CalendarView({
   )
 }
 
+type AdminTab = "bookings" | "pets"
+
 export function AdminDashboard({ initialBookings }: { initialBookings: Booking[] }) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [filter, setFilter] = useState<string>("all")
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [activeTab, setActiveTab] = useState<AdminTab>("bookings")
+  const [pets, setPets] = useState<Pet[]>([])
+  const [petsLoading, setPetsLoading] = useState(false)
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -190,6 +222,36 @@ export function AdminDashboard({ initialBookings }: { initialBookings: Booking[]
       console.error("Error refreshing bookings:", error)
     } finally {
       setIsRefreshing(false)
+    }
+  }
+
+  const fetchPets = async () => {
+    setPetsLoading(true)
+    try {
+      const response = await fetch("/api/admin/pets")
+      if (response.ok) {
+        const data = await response.json()
+        setPets(data)
+      }
+    } catch (error) {
+      console.error("Error fetching pets:", error)
+    } finally {
+      setPetsLoading(false)
+    }
+  }
+
+  const verifyVaccination = async (petId: string, vaccinationId: string, verified: boolean) => {
+    try {
+      const response = await fetch("/api/admin/pets/vaccinations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ petId, vaccinationId, verified }),
+      })
+      if (response.ok) {
+        fetchPets()
+      }
+    } catch (error) {
+      console.error("Error verifying vaccination:", error)
     }
   }
 
@@ -237,11 +299,11 @@ export function AdminDashboard({ initialBookings }: { initialBookings: Booking[]
             <Button
               variant="outline"
               size="sm"
-              onClick={refreshBookings}
-              disabled={isRefreshing}
+              onClick={activeTab === "bookings" ? refreshBookings : fetchPets}
+              disabled={isRefreshing || petsLoading}
               className="rounded-full"
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing || petsLoading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
             <Button
@@ -255,9 +317,39 @@ export function AdminDashboard({ initialBookings }: { initialBookings: Booking[]
             </Button>
           </div>
         </div>
+        {/* Tabs */}
+        <div className="max-w-7xl mx-auto px-4 md:px-6 flex gap-4 border-t border-border">
+          <button
+            onClick={() => setActiveTab("bookings")}
+            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "bookings"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Calendar className="w-4 h-4 inline-block mr-2" />
+            Bookings
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("pets")
+              if (pets.length === 0) fetchPets()
+            }}
+            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "pets"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Dog className="w-4 h-4 inline-block mr-2" />
+            Pet Profiles
+          </button>
+        </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">
+        {activeTab === "bookings" && (
+          <>
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-card rounded-2xl border border-border p-4">
@@ -482,6 +574,150 @@ export function AdminDashboard({ initialBookings }: { initialBookings: Booking[]
             </div>
           </div>
         </div>
+          </>
+        )}
+
+        {activeTab === "pets" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-foreground">Pet Profiles</h2>
+                <p className="text-sm text-muted-foreground">View and verify vaccination records</p>
+              </div>
+              <p className="text-sm text-muted-foreground">{pets.length} pets registered</p>
+            </div>
+
+            {petsLoading ? (
+              <div className="text-center py-12 text-muted-foreground">Loading pets...</div>
+            ) : pets.length === 0 ? (
+              <div className="text-center py-12 border-2 border-dashed border-border rounded-xl">
+                <Dog className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">No pet profiles yet</p>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {pets.map((pet) => (
+                  <div key={pet.id} className="bg-card border border-border rounded-xl p-4">
+                    <div className="flex items-start gap-4">
+                      <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
+                        {pet.profile_image_url ? (
+                          <img 
+                            src={`/api/file?pathname=${encodeURIComponent(pet.profile_image_url)}`}
+                            alt={pet.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Dog className="w-7 h-7 text-primary" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-foreground">{pet.name}</h3>
+                          {pet.size && (
+                            <span className="px-2 py-0.5 bg-secondary rounded-full text-xs capitalize">
+                              {pet.size}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {pet.breed || "Unknown breed"}
+                          {pet.age_years !== null && ` • ${pet.age_years} years`}
+                          {pet.weight_lbs && ` • ${pet.weight_lbs} lbs`}
+                        </p>
+                        {pet.users?.email && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            <Mail className="w-3 h-3 inline mr-1" />
+                            {pet.users.email}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Vaccination Records */}
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Shield className="w-4 h-4 text-primary" />
+                        <span className="font-medium text-sm">Vaccination Records</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({pet.vaccination_records?.length || 0})
+                        </span>
+                      </div>
+
+                      {!pet.vaccination_records?.length ? (
+                        <p className="text-sm text-muted-foreground text-center py-3 bg-secondary/30 rounded-lg">
+                          No vaccination records
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {pet.vaccination_records.map((vax) => (
+                            <div 
+                              key={vax.id}
+                              className={`p-3 rounded-lg text-sm ${
+                                vax.verified 
+                                  ? "bg-green-50 border border-green-200" 
+                                  : "bg-yellow-50 border border-yellow-200"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{vax.vaccine_name}</span>
+                                    {vax.verified ? (
+                                      <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs flex items-center gap-1">
+                                        <Check className="w-3 h-3" />
+                                        Verified
+                                      </span>
+                                    ) : (
+                                      <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-xs">
+                                        Pending
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Given: {new Date(vax.date_administered).toLocaleDateString()}
+                                    {vax.expiration_date && ` • Expires: ${new Date(vax.expiration_date).toLocaleDateString()}`}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {vax.document_pathname && (
+                                    <a 
+                                      href={`/api/file?pathname=${encodeURIComponent(vax.document_pathname)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-2 hover:bg-white/50 rounded-lg"
+                                      title="View document"
+                                    >
+                                      <Eye className="w-4 h-4 text-primary" />
+                                    </a>
+                                  )}
+                                  {!vax.verified ? (
+                                    <button
+                                      onClick={() => verifyVaccination(pet.id, vax.id, true)}
+                                      className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs"
+                                    >
+                                      Verify
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => verifyVaccination(pet.id, vax.id, false)}
+                                      className="px-3 py-1 bg-secondary text-muted-foreground rounded-lg hover:bg-secondary/80 transition-colors text-xs"
+                                    >
+                                      Unverify
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   )

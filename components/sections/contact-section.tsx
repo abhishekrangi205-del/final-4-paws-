@@ -360,7 +360,8 @@ export function ContactSection() {
   const handleProceedToCheckout = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!agreedToTerms) {
+    // Only require grooming agreement if grooming is selected
+    if (hasGroomingSelected() && !agreedToTerms) {
       setShowAgreementWarning(true)
       return
     }
@@ -469,6 +470,10 @@ const getAllProductIds = () => {
   const hasTeethCleaningSelected = () => {
     return selectedServices.some(s => s.category === "teeth-cleaning") || 
            selectedAddOns.some(a => a.category === "teeth-cleaning")
+  }
+
+  const hasGroomingSelected = () => {
+    return selectedServices.some(s => s.category === "grooming")
   }
 
   const mainServices = getMainServices()
@@ -628,13 +633,19 @@ const getAllProductIds = () => {
                 
                 {/* Continue Button */}
                 <Button 
-                  onClick={handleProceedToAddOns}
+                  onClick={hasGroomingSelected() ? handleProceedToAddOns : handleProceedToDetails}
                   size="lg" 
                   className="w-full rounded-full text-lg"
                   disabled={selectedServices.length === 0}
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Continue to Add-Ons
+                  {hasGroomingSelected() ? (
+                    <>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Continue to Add-Ons
+                    </>
+                  ) : (
+                    "Continue to Booking Details"
+                  )}
                 </Button>
               </>
             )}
@@ -752,11 +763,11 @@ const getAllProductIds = () => {
             {step === "booking-details" && (
               <>
                 <button
-                  onClick={handleBackToAddOns}
+                  onClick={hasGroomingSelected() ? handleBackToAddOns : handleBackToServices}
                   className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Back to add-ons
+                  {hasGroomingSelected() ? "Back to add-ons" : "Back to services"}
                 </button>
                 
                 {/* Order Summary */}
@@ -983,61 +994,63 @@ const getAllProductIds = () => {
                     className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground resize-none"
                   />
                   
-                  {/* Grooming Agreement */}
-                  <div className="bg-secondary/50 rounded-xl p-4 border border-border">
-                    <h4 className="font-semibold text-foreground mb-3">Grooming Appointment Policy & Pet Grooming Waiver</h4>
-                    <div className="max-h-[200px] overflow-y-auto text-sm text-muted-foreground space-y-4 mb-4 pr-2">
-                      <p>
-                        By signing this waiver and leaving your pet(s) in the care of All 4 Paws Playcare Inc., you understand that you are entering into a contract for the provision of grooming services. There is a cost associated with the service, and you are agreeing to pay the total due in full promptly upon pick up by cash or check. Refer to the price list and be aware of additional charges.
-                      </p>
-                      
-                      <p>
-                        <strong className="text-foreground">Flea Free Facility:</strong> We are a flea-free facility. If at any time during the groom, your pet is found to have fleas, the grooming will be discontinued, and there will be an additional charge for cleanup and fumigation ($60+). We reserve the right to discontinue services due to fleas. If services are discontinued, full fees are payable in full upon pick up by cash or check.
-                      </p>
-                      
-                      <p>
-                        <strong className="text-foreground">Accident and Injury Waiver:</strong> Grooming can be a dangerous activity. We are taking sharp instruments near your pet(s), and although we are proud of our safety record, accidents can happen. In the event of an accident, we will promptly inform you to the best of our ability. If your pet(s) is in peril or loss of limb, steps will be taken to secure the safety of your pet(s) prior to contacting you. We are not responsible for any cost arising from accidents or injuries before, during, and after your pet(s) is in our care. We take every precaution as determined by our groomers, operators, and staff to prevent injury, but there is a risk inherent with the process. Sometimes grooming will make evident an underlying medical condition - we will make every effort to inform you of any conditions that we notice during the groom, but are not responsible for any cost arising from same. Note: We are not veterinarians and we do recommend for you to seek professional advice on all matters.
-                      </p>
-                      
-                      <p>
-                        <strong className="text-foreground">Matt Waiver:</strong> If your pet(s) is matted, it will be shaved. No excuses. No exceptions. We do not brush out severely matted coats. Matting is painful to your pet and dangerous for their skin. In addition, the hair will be extremely damaged and will continue to matt. An additional charge of $10/10 minutes plus HST in addition to the base price of your groom will apply for the removal of matting. Matting can lead to bruises, cuts, hematoma, ulcers and skin irritation once released & removed - you are accepting responsibility for the conditions of your dogs in releasing All 4 Paws Playcare Inc. of all liability for accident or injury of your pet(s). Please maintain your pet(s).
-                      </p>
-                      
-                      <p>
-                        <strong className="text-foreground">Missed Appointment Policy:</strong><br />
-                        1st Time - 50% of estimated grooming cost is due and added to your next appointment.<br />
-                        2nd Time - 100% of estimated cost is due and added to your next appointment.<br />
-                        3rd Time - 100% of estimated groom due and must be paid prior to booking your next appointment and future appointments must be paid in advance prior to booking.
-                      </p>
-                      
-                      <p>
-                        <strong className="text-foreground">Late Pick Up Policy:</strong> We allow a 30-minute grace period after notifying you to pick up your pet(s). If for any reason you need more time than that, please notify us prior to your appointment. If you do not pick up your pet(s) within 30 minutes, a $10+HST per 15 minutes will be billed and due prior to pick up. Our facility closes at 6 PM. If your pets are left beyond this point, please return the following day at 6 AM for pick up and there will be a $200+HST charge, which will be paid in full along with your grooming and late fees leading up to 6 PM when picking up your pet(s) at 6 AM sharp the following morning.
-                      </p>
-                      
-                      <p className="font-medium text-foreground">
-                        By checking below, you are agreeing that you certify and understand and agree with this policy, and forever release All 4 Paws Playcare Inc., and its operators and staff of all liability and responsibilities for potential accidents, injuries, and/or death.
-                      </p>
+                  {/* Grooming Agreement - Only shows when grooming is selected */}
+                  {hasGroomingSelected() && (
+                    <div className="bg-secondary/50 rounded-xl p-4 border border-border">
+                      <h4 className="font-semibold text-foreground mb-3">Grooming Appointment Policy & Pet Grooming Waiver</h4>
+                      <div className="max-h-[200px] overflow-y-auto text-sm text-muted-foreground space-y-4 mb-4 pr-2">
+                        <p>
+                          By signing this waiver and leaving your pet(s) in the care of All 4 Paws Playcare Inc., you understand that you are entering into a contract for the provision of grooming services. There is a cost associated with the service, and you are agreeing to pay the total due in full promptly upon pick up by cash or check. Refer to the price list and be aware of additional charges.
+                        </p>
+                        
+                        <p>
+                          <strong className="text-foreground">Flea Free Facility:</strong> We are a flea-free facility. If at any time during the groom, your pet is found to have fleas, the grooming will be discontinued, and there will be an additional charge for cleanup and fumigation ($60+). We reserve the right to discontinue services due to fleas. If services are discontinued, full fees are payable in full upon pick up by cash or check.
+                        </p>
+                        
+                        <p>
+                          <strong className="text-foreground">Accident and Injury Waiver:</strong> Grooming can be a dangerous activity. We are taking sharp instruments near your pet(s), and although we are proud of our safety record, accidents can happen. In the event of an accident, we will promptly inform you to the best of our ability. If your pet(s) is in peril or loss of limb, steps will be taken to secure the safety of your pet(s) prior to contacting you. We are not responsible for any cost arising from accidents or injuries before, during, and after your pet(s) is in our care. We take every precaution as determined by our groomers, operators, and staff to prevent injury, but there is a risk inherent with the process. Sometimes grooming will make evident an underlying medical condition - we will make every effort to inform you of any conditions that we notice during the groom, but are not responsible for any cost arising from same. Note: We are not veterinarians and we do recommend for you to seek professional advice on all matters.
+                        </p>
+                        
+                        <p>
+                          <strong className="text-foreground">Matt Waiver:</strong> If your pet(s) is matted, it will be shaved. No excuses. No exceptions. We do not brush out severely matted coats. Matting is painful to your pet and dangerous for their skin. In addition, the hair will be extremely damaged and will continue to matt. An additional charge of $10/10 minutes plus HST in addition to the base price of your groom will apply for the removal of matting. Matting can lead to bruises, cuts, hematoma, ulcers and skin irritation once released & removed - you are accepting responsibility for the conditions of your dogs in releasing All 4 Paws Playcare Inc. of all liability for accident or injury of your pet(s). Please maintain your pet(s).
+                        </p>
+                        
+                        <p>
+                          <strong className="text-foreground">Missed Appointment Policy:</strong><br />
+                          1st Time - 50% of estimated grooming cost is due and added to your next appointment.<br />
+                          2nd Time - 100% of estimated cost is due and added to your next appointment.<br />
+                          3rd Time - 100% of estimated groom due and must be paid prior to booking your next appointment and future appointments must be paid in advance prior to booking.
+                        </p>
+                        
+                        <p>
+                          <strong className="text-foreground">Late Pick Up Policy:</strong> We allow a 30-minute grace period after notifying you to pick up your pet(s). If for any reason you need more time than that, please notify us prior to your appointment. If you do not pick up your pet(s) within 30 minutes, a $10+HST per 15 minutes will be billed and due prior to pick up. Our facility closes at 6 PM. If your pets are left beyond this point, please return the following day at 6 AM for pick up and there will be a $200+HST charge, which will be paid in full along with your grooming and late fees leading up to 6 PM when picking up your pet(s) at 6 AM sharp the following morning.
+                        </p>
+                        
+                        <p className="font-medium text-foreground">
+                          By checking below, you are agreeing that you certify and understand and agree with this policy, and forever release All 4 Paws Playcare Inc., and its operators and staff of all liability and responsibilities for potential accidents, injuries, and/or death.
+                        </p>
+                      </div>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={agreedToTerms}
+                          onChange={(e) => {
+                            setAgreedToTerms(e.target.checked)
+                            if (e.target.checked) setShowAgreementWarning(false)
+                          }}
+                          className="w-5 h-5 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                        />
+                        <span className="text-sm text-foreground font-medium">
+                          I agree to the grooming terms and conditions
+                        </span>
+                      </label>
+                      {showAgreementWarning && (
+                        <p className="text-sm text-destructive mt-2 flex items-center gap-1">
+                          <span>Please agree to the terms and conditions to proceed.</span>
+                        </p>
+                      )}
                     </div>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={agreedToTerms}
-                        onChange={(e) => {
-                          setAgreedToTerms(e.target.checked)
-                          if (e.target.checked) setShowAgreementWarning(false)
-                        }}
-                        className="w-5 h-5 rounded border-border text-primary focus:ring-primary cursor-pointer"
-                      />
-                      <span className="text-sm text-foreground font-medium">
-                        I agree to the grooming terms and conditions
-                      </span>
-                    </label>
-                    {showAgreementWarning && (
-                      <p className="text-sm text-destructive mt-2 flex items-center gap-1">
-                        <span>Please agree to the terms and conditions to proceed.</span>
-                      </p>
-                    )}
-                  </div>
+                  )}
                   
                   {/* Natural Cosmetic Teeth Cleaning Agreement - Only shows when teeth cleaning is selected */}
                   {hasTeethCleaningSelected() && (
@@ -1107,7 +1120,7 @@ const getAllProductIds = () => {
                     disabled={
                       isSubmitting || 
                       !selectedDate || 
-                      !agreedToTerms || 
+                      (hasGroomingSelected() && !agreedToTerms) || 
                       (hasTeethCleaningSelected() && !agreedToTeethCleaning) ||
                       (hasDaycareSelected() ? !selectedTimeSlot : !selectedTime)
                     }

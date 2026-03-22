@@ -22,6 +22,11 @@ export function DesktopNav() {
   useEffect(() => {
     const supabase = createClient()
     
+    // Handle case where Supabase is not configured
+    if (!supabase) {
+      return
+    }
+    
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user)
     })

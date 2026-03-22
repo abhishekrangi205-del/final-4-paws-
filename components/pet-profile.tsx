@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { 
@@ -68,12 +68,7 @@ export function PetProfileManager() {
   const [showAddVaccine, setShowAddVaccine] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   
-  // Fetch pets on mount
-  useState(() => {
-    fetchPets()
-  })
-  
-  const fetchPets = async () => {
+  const fetchPets = useCallback(async () => {
     try {
       const res = await fetch("/api/pets")
       if (res.ok) {
@@ -85,7 +80,12 @@ export function PetProfileManager() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
+  
+  // Fetch pets on mount
+  useEffect(() => {
+    fetchPets()
+  }, [fetchPets])
   
   if (isLoading) {
     return (

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Home, Scissors, Images, Info, Calendar, LogIn, Dog } from "lucide-react"
+import { Home, Scissors, Images, Info, MapPin, LogIn, Dog } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -11,7 +11,7 @@ const navItems = [
   { href: "#services", label: "Services", icon: Scissors },
   { href: "#gallery", label: "Gallery", icon: Images },
   { href: "#about", label: "About", icon: Info },
-  { href: "#book", label: "Book", icon: Calendar },
+  { href: "#contact", label: "Contact", icon: MapPin },
 ]
 
 function PawIcon({ className }: { className?: string }) {

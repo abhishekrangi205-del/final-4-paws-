@@ -498,39 +498,43 @@ const getAllProductIds = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 md:gap-12">
-          {/* Contact Info */}
-          <div className="grid grid-cols-2 gap-3 md:gap-6">
+        <div className="flex flex-col gap-4 md:gap-8">
+          {/* Contact Info - Horizontal Layout */}
+          <div className="flex flex-row gap-2 md:gap-4 overflow-x-auto pb-2 md:pb-0 md:justify-center -mx-4 px-4 md:mx-0 md:px-0">
             {contactInfo.map((info, index) => {
               const Icon = info.icon
               const content = (
-                <div className={`bg-card rounded-2xl md:rounded-3xl p-4 md:p-6 border border-border ${info.link ? 'hover:border-primary/50 transition-colors cursor-pointer' : ''}`}>
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 md:mb-4">
-                    <Icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+                <div className={`bg-card rounded-xl md:rounded-2xl p-3 md:p-4 border border-border flex-shrink-0 w-[140px] md:w-auto ${info.link ? 'hover:border-primary/50 transition-colors cursor-pointer' : ''}`}>
+                  <div className="flex items-center gap-2 md:flex-col md:items-start">
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 md:mb-2">
+                      <Icon className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-foreground text-xs md:text-sm mb-0.5">{info.title}</h3>
+                      {info.details.map((detail, i) => (
+                        <p key={i} className="text-muted-foreground text-[10px] md:text-xs leading-tight truncate">
+                          {detail}
+                        </p>
+                      ))}
+                    </div>
                   </div>
-                  <h3 className="font-semibold text-foreground text-sm md:text-base mb-1 md:mb-2">{info.title}</h3>
-                  {info.details.map((detail, i) => (
-                    <p key={i} className="text-muted-foreground text-xs md:text-sm leading-relaxed">
-                      {detail}
-                    </p>
-                  ))}
                 </div>
               )
               
               if (info.link) {
                 return (
-                  <a key={index} href={info.link} target={info.link.startsWith('http') ? '_blank' : undefined} rel={info.link.startsWith('http') ? 'noopener noreferrer' : undefined}>
+                  <a key={index} href={info.link} target={info.link.startsWith('http') ? '_blank' : undefined} rel={info.link.startsWith('http') ? 'noopener noreferrer' : undefined} className="flex-shrink-0">
                     {content}
                   </a>
                 )
               }
               
-              return <div key={index}>{content}</div>
+              return <div key={index} className="flex-shrink-0">{content}</div>
             })}
           </div>
 
           {/* Booking Form */}
-          <div id="book" className="bg-card rounded-2xl md:rounded-3xl p-5 md:p-8 border border-border">
+          <div id="book" className="bg-card rounded-2xl md:rounded-3xl p-4 md:p-8 border border-border max-w-2xl mx-auto w-full">
             
             {/* Step 1: Select Services */}
             {step === "select-services" && (

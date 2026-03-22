@@ -1,5 +1,6 @@
 'use client'
 
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -26,8 +27,15 @@ export default function SignUpPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    const supabase = createClient()
     setIsLoading(true)
     setError(null)
+
+    if (!supabase) {
+      setError('Unable to connect to authentication service. Please refresh the page and try again.')
+      setIsLoading(false)
+      return
+    }
 
     if (password !== repeatPassword) {
       setError('Passwords do not match')
@@ -42,21 +50,19 @@ export default function SignUpPage() {
     }
 
     try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-        }),
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo:
+            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
+            `${window.location.origin}/`,
+          data: {
+            full_name: name,
+          },
+        },
       })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Signup failed')
-      }
-
+      if (error) throw error
       router.push('/auth/sign-up-success')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')

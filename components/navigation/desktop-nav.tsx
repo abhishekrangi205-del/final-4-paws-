@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
-import { LogOut, User as UserIcon } from "lucide-react"
+import { LogOut, User as UserIcon, Dog } from "lucide-react"
 
 const navLinks = [
   { href: "#services", label: "Services" },
@@ -71,6 +71,17 @@ export function DesktopNav() {
         <div className="flex items-center gap-4">
           {user ? (
             <>
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Link href="/account">
+                  <Dog className="w-4 h-4 mr-2" />
+                  My Pets
+                </Link>
+              </Button>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <UserIcon className="w-4 h-4" />
                 <span className="max-w-[120px] truncate">{user.email}</span>

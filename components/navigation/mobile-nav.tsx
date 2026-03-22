@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Home, Scissors, Images, Info, Calendar, User, LogIn } from "lucide-react"
+import { Home, Scissors, Images, Info, Calendar, User, LogIn, Dog } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -65,8 +65,8 @@ export function MobileNav() {
             href="/account"
             className="flex flex-col items-center gap-1 py-2 px-3 text-primary hover:text-primary/80 transition-colors touch-manipulation"
           >
-            <User className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Account</span>
+            <Dog className="w-5 h-5" />
+            <span className="text-[10px] font-medium">My Pets</span>
           </Link>
         ) : (
           <Link

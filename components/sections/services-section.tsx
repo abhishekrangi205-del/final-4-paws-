@@ -113,23 +113,23 @@ export function ServicesSection() {
   }
 
   return (
-    <section id="services" className="py-12 md:py-24 bg-secondary/30">
+    <section id="services" className="py-10 md:py-24 bg-secondary/30">
       <div className="max-w-7xl mx-auto px-4 md:px-6">
         {/* Section Header */}
-        <div className="text-center mb-8 md:mb-16">
-          <span className="inline-block px-4 py-1.5 bg-primary/10 text-primary text-sm font-medium rounded-full mb-4">
+        <div className="text-center mb-6 md:mb-16">
+          <span className="inline-block px-3 py-1 md:px-4 md:py-1.5 bg-primary/10 text-primary text-xs md:text-sm font-medium rounded-full mb-3 md:mb-4">
             Our Services
           </span>
-          <h2 className="font-serif text-3xl md:text-5xl font-bold text-foreground mb-4 text-balance">
+          <h2 className="font-serif text-2xl md:text-5xl font-bold text-foreground mb-2 md:mb-4 text-balance">
             Complete Pet Care Services
           </h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-sm md:text-lg max-w-2xl mx-auto hidden md:block">
             From daycare to grooming and everything in between, we provide comprehensive care to keep your furry friend happy, healthy, and looking their best.
           </p>
         </div>
 
         {/* Services Grid */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-2 gap-3 md:gap-6">
           {services.map((service, index) => (
             <ServiceCard
               key={index}
@@ -169,58 +169,58 @@ function ServiceCard({
   }
 
   return (
-    <div className="bg-card rounded-3xl overflow-hidden border border-border group hover:shadow-lg transition-all duration-300">
+    <div className="bg-card rounded-xl md:rounded-3xl overflow-hidden border border-border group hover:shadow-lg transition-all duration-300">
       {/* Header */}
       <button
         onClick={onToggle}
-        className="w-full p-6 flex items-start gap-4 text-left cursor-pointer"
+        className="w-full p-3 md:p-6 flex flex-col md:flex-row items-center md:items-start gap-2 md:gap-4 text-center md:text-left cursor-pointer"
       >
-        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-          <Icon className="w-7 h-7 text-primary" />
+        <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+          <Icon className="w-5 h-5 md:w-7 md:h-7 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-serif text-xl md:text-2xl font-semibold text-foreground mb-2">
+          <h3 className="font-serif text-sm md:text-2xl font-semibold text-foreground leading-tight">
             {service.title}
           </h3>
-          <p className="text-muted-foreground text-sm leading-relaxed">
+          <p className="text-muted-foreground text-xs md:text-sm leading-relaxed hidden md:block mt-2">
             {service.description}
           </p>
         </div>
         <div
-          className={`w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0 transition-transform duration-300 ${
+          className={`w-6 h-6 md:w-8 md:h-8 rounded-full bg-secondary flex items-center justify-center shrink-0 transition-transform duration-300 ${
             isExpanded ? "rotate-180" : ""
           }`}
         >
-          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
         </div>
       </button>
 
       {/* Sub-services / Grooming Cards */}
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded ? "max-h-[1500px] opacity-100" : "max-h-0 opacity-0"
+          isExpanded ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        <div className="px-6 pb-6">
-          <div className="border-t border-border pt-4">
+        <div className="px-3 pb-3 md:px-6 md:pb-6">
+          <div className="border-t border-border pt-3 md:pt-4">
             {/* Grooming Cards Layout */}
             {hasGroomingCards ? (
               <>
-                <div className="grid gap-4">
+                <div className="grid gap-3 md:gap-4">
                   {service.groomingCards?.map((card, cardIndex) => (
-                    <div key={cardIndex} className="bg-secondary/50 rounded-2xl p-4 border border-border">
-                      <h4 className="font-serif text-lg font-semibold text-foreground mb-2">
+                    <div key={cardIndex} className="bg-secondary/50 rounded-xl md:rounded-2xl p-3 md:p-4 border border-border">
+                      <h4 className="font-serif text-sm md:text-lg font-semibold text-foreground mb-1 md:mb-2">
                         {card.title}
                       </h4>
-                      <p className="text-muted-foreground text-sm whitespace-pre-line mb-3">
+                      <p className="text-muted-foreground text-xs md:text-sm whitespace-pre-line mb-2 md:mb-3 hidden md:block">
                         {card.description}
                       </p>
                       
                       {/* Pricing Table */}
                       {"pricing" in card && card.pricing && (
-                        <div className="space-y-1.5">
+                        <div className="space-y-1">
                           {card.pricing.map((item, priceIndex) => (
-                            <div key={priceIndex} className="flex justify-between items-center text-sm">
+                            <div key={priceIndex} className="flex justify-between items-center text-xs md:text-sm">
                               <span className="text-foreground">{item.size}</span>
                               <span className="font-semibold text-primary">{item.price}</span>
                             </div>
@@ -230,11 +230,11 @@ function ServiceCard({
                       
                       {/* Walk-in Services List */}
                       {"services" in card && card.services && (
-                        <div className="mb-3">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Services</p>
-                          <div className="flex flex-wrap gap-2">
+                        <div className="mb-2 md:mb-3">
+                          <p className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 md:mb-2">Services</p>
+                          <div className="flex flex-wrap gap-1 md:gap-2">
                             {card.services.map((svc, svcIndex) => (
-                              <span key={svcIndex} className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">
+                              <span key={svcIndex} className="px-1.5 py-0.5 md:px-2 md:py-1 bg-primary/10 text-primary text-[10px] md:text-xs rounded-full">
                                 {svc}
                               </span>
                             ))}
@@ -245,10 +245,10 @@ function ServiceCard({
                       {/* Trims */}
                       {"trims" in card && card.trims && (
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Trims (pet must be clean)</p>
-                          <div className="space-y-1.5">
+                          <p className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 md:mb-2">Trims (pet must be clean)</p>
+                          <div className="space-y-1">
                             {card.trims.map((trim, trimIndex) => (
-                              <div key={trimIndex} className="flex justify-between items-center text-sm">
+                              <div key={trimIndex} className="flex justify-between items-center text-xs md:text-sm">
                                 <span className="text-foreground">{trim.name}</span>
                                 <span className="font-semibold text-primary">{trim.price}</span>
                               </div>
@@ -262,11 +262,11 @@ function ServiceCard({
                 
                 {/* Add-Ons Section */}
                 {"addOns" in service && service.addOns && (
-                  <div className="mt-4 pt-4 border-t border-border">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Add-Ons</p>
-                    <div className="flex flex-wrap gap-2">
+                  <div className="mt-3 pt-3 md:mt-4 md:pt-4 border-t border-border">
+                    <p className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 md:mb-3">Add-Ons</p>
+                    <div className="flex flex-wrap gap-1.5 md:gap-2">
                       {service.addOns.map((addOn, addOnIndex) => (
-                        <div key={addOnIndex} className="flex items-center gap-2 px-3 py-1.5 bg-secondary rounded-full text-sm">
+                        <div key={addOnIndex} className="flex items-center gap-1 md:gap-2 px-2 py-1 md:px-3 md:py-1.5 bg-secondary rounded-full text-[10px] md:text-sm">
                           <span className="text-foreground">{addOn.name}</span>
                           <span className="font-semibold text-primary">{addOn.price}</span>
                         </div>
@@ -278,23 +278,23 @@ function ServiceCard({
             ) : isHighlighted ? (
               <>
                 {/* Highlighted Teeth Cleaning Layout */}
-                <div className="bg-primary/5 rounded-2xl p-4 border border-primary/20 mb-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-medium text-primary uppercase tracking-wider">Standard Price</span>
-                    <span className="text-2xl font-bold text-primary">{"price" in service ? service.price : ""}</span>
+                <div className="bg-primary/5 rounded-xl md:rounded-2xl p-3 md:p-4 border border-primary/20 mb-3 md:mb-4">
+                  <div className="flex items-center justify-between mb-2 md:mb-4">
+                    <span className="text-[10px] md:text-xs font-medium text-primary uppercase tracking-wider">Standard Price</span>
+                    <span className="text-lg md:text-2xl font-bold text-primary">{"price" in service ? service.price : ""}</span>
                   </div>
                   
                   {/* What's Included */}
                   {"whatsIncluded" in service && service.whatsIncluded && (
-                    <div className="mb-4">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">What&apos;s Included</p>
-                      <ul className="space-y-2">
+                    <div className="mb-3 md:mb-4">
+                      <p className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 md:mb-2">What&apos;s Included</p>
+                      <ul className="space-y-1 md:space-y-2">
                         {service.whatsIncluded.map((item, itemIndex) => (
-                          <li key={itemIndex} className="flex items-center gap-2">
-                            <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                              <Check className="w-3 h-3 text-primary" />
+                          <li key={itemIndex} className="flex items-center gap-1.5 md:gap-2">
+                            <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <Check className="w-2.5 h-2.5 md:w-3 md:h-3 text-primary" />
                             </div>
-                            <span className="text-foreground text-sm">{item}</span>
+                            <span className="text-foreground text-xs md:text-sm">{item}</span>
                           </li>
                         ))}
                       </ul>
@@ -303,11 +303,11 @@ function ServiceCard({
                   
                   {/* Notes */}
                   {"notes" in service && service.notes && (
-                    <div className="pt-3 border-t border-border">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Good to Know</p>
-                      <ul className="space-y-1.5">
+                    <div className="pt-2 md:pt-3 border-t border-border">
+                      <p className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 md:mb-2">Good to Know</p>
+                      <ul className="space-y-1">
                         {service.notes.map((note, noteIndex) => (
-                          <li key={noteIndex} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <li key={noteIndex} className="flex items-start gap-1.5 md:gap-2 text-xs md:text-sm text-muted-foreground">
                             <span className="text-primary">•</span>
                             {note}
                           </li>
@@ -321,37 +321,37 @@ function ServiceCard({
               <>
                 {/* Standard Sub-services Layout */}
                 {hasPricing && (
-                  <div className="flex gap-4 mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <div className="flex gap-2 md:gap-4 mb-2 md:mb-3 text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     <span className="flex-1">Service</span>
-                    <span className="w-16 text-center">Small</span>
-                    <span className="w-16 text-center">Large</span>
+                    <span className="w-10 md:w-16 text-center">Small</span>
+                    <span className="w-10 md:w-16 text-center">Large</span>
                   </div>
                 )}
                 {!hasPricing && service.subServices.length > 0 && (
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                  <p className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 md:mb-3">
                     Services Included
                   </p>
                 )}
-                <ul className="space-y-3">
+                <ul className="space-y-2 md:space-y-3">
                   {service.subServices.map((subService, subIndex) => (
-                    <li key={subIndex} className="flex items-start gap-3">
-                      <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                        <Check className="w-3 h-3 text-primary" />
+                    <li key={subIndex} className="flex items-start gap-2 md:gap-3">
+                      <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check className="w-2.5 h-2.5 md:w-3 md:h-3 text-primary" />
                       </div>
-                      <div className="flex-1">
-                        <span className="text-foreground font-medium text-sm">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-foreground font-medium text-xs md:text-sm">
                           {subService.name}
                         </span>
-                        <p className="text-muted-foreground text-xs mt-0.5">
+                        <p className="text-muted-foreground text-[10px] md:text-xs mt-0.5 hidden md:block">
                           {subService.description}
                         </p>
                       </div>
                       {"priceSmall" in subService && (
                         <>
-                          <span className="w-16 text-center text-sm font-semibold text-primary">
+                          <span className="w-10 md:w-16 text-center text-xs md:text-sm font-semibold text-primary">
                             {subService.priceSmall}
                           </span>
-                          <span className="w-16 text-center text-sm font-semibold text-primary">
+                          <span className="w-10 md:w-16 text-center text-xs md:text-sm font-semibold text-primary">
                             {subService.priceLarge}
                           </span>
                         </>
@@ -365,10 +365,10 @@ function ServiceCard({
             {/* Book Now Button */}
             <button
               onClick={handleBookNow}
-              className="mt-6 w-full flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors cursor-pointer"
+              className="mt-4 md:mt-6 w-full flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-primary text-primary-foreground rounded-full text-xs md:text-base font-medium hover:bg-primary/90 transition-colors cursor-pointer"
             >
-              Book {service.title}
-              <ArrowRight className="w-4 h-4" />
+              Book Now
+              <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
             </button>
           </div>
         </div>

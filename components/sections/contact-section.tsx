@@ -200,6 +200,8 @@ export function ContactSection() {
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [showAgreementWarning, setShowAgreementWarning] = useState(false)
+  const [agreedToTeethCleaning, setAgreedToTeethCleaning] = useState(false)
+  const [showTeethCleaningWarning, setShowTeethCleaningWarning] = useState(false)
   
   useEffect(() => {
     const supabase = createClient()
@@ -291,6 +293,11 @@ export function ContactSection() {
       return
     }
     
+    if (hasTeethCleaningSelected() && !agreedToTeethCleaning) {
+      setShowTeethCleaningWarning(true)
+      return
+    }
+    
     if (!selectedDate || !selectedTime || selectedServices.length === 0) {
       alert("Please select a date and time for your appointment.")
       return
@@ -360,8 +367,14 @@ export function ContactSection() {
     return servicesPrice + addOnsPrice
   }
 
-  const getAllProductIds = () => {
-    return [...selectedServices.map(s => s.id), ...selectedAddOns.map(a => a.id)]
+const getAllProductIds = () => {
+    const ids = selectedServices.map(s => s.id)
+    return [...ids, ...selectedAddOns.map(a => a.id)]
+  }
+
+  const hasTeethCleaningSelected = () => {
+    return selectedServices.some(s => s.category === "teeth-cleaning") || 
+           selectedAddOns.some(a => a.category === "teeth-cleaning")
   }
 
   const mainServices = getMainServices()
@@ -831,11 +844,72 @@ export function ContactSection() {
                     )}
                   </div>
                   
+                  {/* Natural Cosmetic Teeth Cleaning Agreement - Only shows when teeth cleaning is selected */}
+                  {hasTeethCleaningSelected() && (
+                    <div className="bg-secondary/50 rounded-xl p-4 border border-border">
+                      <h4 className="font-semibold text-foreground mb-3">All Natural Cosmetic Teeth Cleaning - Liability Waiver</h4>
+                      <div className="max-h-[200px] overflow-y-auto text-sm text-muted-foreground space-y-4 mb-4 pr-2">
+                        <p className="font-bold text-foreground text-center">LIABILITY WAIVER AND HOLD HARMLESS AGREEMENT</p>
+                        
+                        <p>
+                          BY SIGNING THIS AGREEMENT, THE ANIMAL(S) OWNER AGREES TO INDEMNIFY AND HOLD ALL 4 PAWS PLAYCARE INC., AND ALL EMPLOYEES AND AGENTS OF ALL 4 PAWS PLAYCARE INC. HARMLESS FROM AND AGAINST ALL CLAIMS, DEMANDS OR CAUSES OF ACTION. LIABILITY, LOSS, DAMAGES, OR EXPENSES, INCLUDING ATTORNEYS FEES AND COSTS, ARISING OUT OF OR IN THE COURSE OF ANY ANIMAL TEETH CLEANING ACTIVITIES.
+                        </p>
+                        
+                        <p>
+                          THIS INDEMNITY AND HOLD HARMLESS AGREEMENT SHALL INCLUDE COMPANIES OR ANY OF ITS EMPLOYEES, OFFICERS, OR SHAREHOLDERS FOR NEGLIGENCE AND/OR STRICT LIABILITY.
+                        </p>
+                        
+                        <p>
+                          WE WILL NOT USE HOMEOPATHIC REMEDIES, MEDICATION OR SEDATION TO CALM YOUR PET. SHOULD YOU OPT TO GIVE YOUR PUP ANY FORM OF MEDICATION (SUCH AS SPRAY, HEMP, OVER THE COUNTER MEDICATION, PRESCRIBED MEDICATION...), PLEASE MAKE SURE THIS IS NOT THE FIRST TIME GIVING IT TO THEM TO ENSURE THEY ARE NOT HAVING ANY REACTION WHILE WITH ALL 4 PAWS PLAYCARE INC. STAFF.
+                        </p>
+                        
+                        <p>
+                          TO RELEASE AND HOLD, ALL 4 PAWS PLAYCARE INC., ITS PRINCIPALS, OFFICERS, DIRECTORS, AGENTS AND/OR EMPLOYEES HARMLESS FROM AND AGAINST ANY CLAIMS, LIABILITIES, DEMANDS, ACTIONS OR CAUSES OF ACTION FOR ANY INJURIES, HARM, LOSS, INCONVENIENCE, OR DAMAGES HOWSOEVER SUFFERED ARISING FROM THE SERVICES PROVIDED.
+                        </p>
+                        
+                        <p>
+                          EVERY EFFORT WILL BE MADE TO CLEAN AND REMOVE ALL THE TARTAR (CALCULUS) FROM YOUR PET'S TEETH, WITHIN THE LIMITS AS PRESCRIBED BY STATUTE AND CASE LAW FOR A PERSON WHO IS NOT LICENSED TO PRACTICE VETERINARY MEDICINE. IT IS IMPORTANT TO NOTE THAT YOUR PET WILL BE AWAKE AND DEPENDING ON HOW MUCH THEY WIGGLE IT MAY BE IMPOSSIBLE TO REMOVE ALL TARTAR ABOVE THE GUM LINE FROM THEIR TEETH.
+                        </p>
+                        
+                        <p>
+                          WE STRIVE TO BE ON TIME FOR YOUR APPOINTMENT. WE HAVE NO CONTROL OVER HOW LONG THE DOG IN FRONT OF YOURS TAKES. PLEASE BE PATIENT.
+                        </p>
+                        
+                        <p>
+                          AS A PRECAUTIONARY, WE RECOMMEND ALL OF OUR CLIENTS TO CONSULT WITH THEIR VETERINARIAN, PRIOR TO AND/OR THEREAFTER THEIR COSMETIC TEETH CLEANING.
+                        </p>
+                        
+                        <p className="font-medium text-foreground">
+                          NOTE: WE ARE NOT VETERINARIANS, AND THIS PROCEDURE SHOULD NOT BE CONSIDERED A VETERINARY CLEANING BUT A COSMETIC CLEANING ONLY.
+                        </p>
+                      </div>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={agreedToTeethCleaning}
+                          onChange={(e) => {
+                            setAgreedToTeethCleaning(e.target.checked)
+                            if (e.target.checked) setShowTeethCleaningWarning(false)
+                          }}
+                          className="w-5 h-5 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                        />
+                        <span className="text-sm text-foreground font-medium">
+                          I agree to the teeth cleaning liability waiver
+                        </span>
+                      </label>
+                      {showTeethCleaningWarning && (
+                        <p className="text-sm text-destructive mt-2 flex items-center gap-1">
+                          <span>Please agree to the teeth cleaning liability waiver to proceed.</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
                   <Button 
                     type="submit" 
                     size="lg" 
                     className="w-full rounded-full text-lg"
-                    disabled={isSubmitting || !selectedDate || !selectedTime || !agreedToTerms}
+                    disabled={isSubmitting || !selectedDate || !selectedTime || !agreedToTerms || (hasTeethCleaningSelected() && !agreedToTeethCleaning)}
                   >
                     {isSubmitting ? (
                       <>

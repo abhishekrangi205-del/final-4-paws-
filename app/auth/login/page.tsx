@@ -29,6 +29,12 @@ export default function LoginPage() {
     setIsLoading(true)
     setError(null)
 
+    if (!supabase) {
+      setError('Authentication service is not configured. Please try again later.')
+      setIsLoading(false)
+      return
+    }
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,

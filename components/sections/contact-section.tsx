@@ -5,7 +5,7 @@ import { MapPin, Phone, Mail, Clock, ChevronLeft, ChevronRight, Loader2, User, C
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { createClient } from "@/lib/supabase/client"
-import { SERVICES, formatPrice, getAddOns, type ServiceProduct } from "@/lib/products"
+import { SERVICES, formatPrice, getAddOns, getMainServices, type ServiceProduct } from "@/lib/products"
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -179,13 +179,14 @@ function Calendar({
   )
 }
 
-type BookingStep = "select-service" | "booking-details" | "add-ons" | "checkout"
+type BookingStep = "select-services" | "add-ons" | "booking-details" | "checkout"
 
 export function ContactSection() {
   const [user, setUser] = useState<SupabaseUser | null>(null)
-  const [step, setStep] = useState<BookingStep>("select-service")
+  const [step, setStep] = useState<BookingStep>("select-services")
   const [selectedCategory, setSelectedCategory] = useState<string>("")
-  const [selectedService, setSelectedService] = useState<ServiceProduct | null>(null)
+  const [selectedServices, setSelectedServices] = useState<ServiceProduct[]>([])
+  const [selectedAddOns, setSelectedAddOns] = useState<ServiceProduct[]>([])
   const [formData, setFormData] = useState({
     customerName: "",
     petName: "",
@@ -195,7 +196,6 @@ export function ContactSection() {
   })
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<string>("")
-  const [selectedAddOns, setSelectedAddOns] = useState<ServiceProduct[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
   
@@ -204,7 +204,7 @@ export function ContactSection() {
     
     const handleSelectService = (event: CustomEvent<string>) => {
       setSelectedCategory(event.detail)
-      setStep("select-service")
+      setStep("select-services")
     }
     
     window.addEventListener("selectService", handleSelectService as EventListener)
@@ -249,54 +249,22 @@ export function ContactSection() {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleServiceSelect = (service: ServiceProduct) => {
-    setSelectedService(service)
-    setStep("booking-details")
+  const handleServiceToggle = (service: ServiceProduct) => {
+    setSelectedServices(prev => {
+      const exists = prev.find(s => s.id === service.id)
+      if (exists) {
+        return prev.filter(s => s.id !== service.id)
+      }
+      return [...prev, service]
+    })
   }
 
-  const handleProceedToAddOns = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!selectedDate || !selectedTime || !selectedService) {
-      alert("Please select a date and time for your appointment.")
+  const handleProceedToAddOns = () => {
+    if (selectedServices.length === 0) {
+      alert("Please select at least one service.")
       return
     }
-    
-    setIsSubmitting(true)
-    setSubmitStatus("idle")
-    
-    try {
-      const supabase = createClient()
-      
-      // Handle case where Supabase is not configured
-      if (!supabase) {
-        // Skip database insert and proceed to add-ons
-        setStep("add-ons")
-        return
-      }
-      
-      const { error } = await supabase.from("bookings").insert({
-        customer_name: formData.customerName,
-        pet_name: formData.petName,
-        email: formData.email,
-        phone: formData.phone,
-        service: selectedService.name,
-        booking_date: selectedDate.toISOString().split("T")[0],
-        booking_time: selectedTime,
-        notes: formData.notes,
-        status: "pending",
-        user_id: user?.id || null,
-      })
-      
-      if (error) throw error
-      
-      setStep("add-ons")
-    } catch (error) {
-      console.error("Error submitting booking:", error)
-      setSubmitStatus("error")
-    } finally {
-      setIsSubmitting(false)
-    }
+    setStep("add-ons")
   }
 
   const handleAddOnToggle = (addOn: ServiceProduct) => {
@@ -309,38 +277,90 @@ export function ContactSection() {
     })
   }
 
-  const handleProceedToCheckout = () => {
-    setStep("checkout")
+  const handleProceedToDetails = () => {
+    setStep("booking-details")
+  }
+
+  const handleProceedToCheckout = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!selectedDate || !selectedTime || selectedServices.length === 0) {
+      alert("Please select a date and time for your appointment.")
+      return
+    }
+    
+    setIsSubmitting(true)
+    setSubmitStatus("idle")
+    
+    try {
+      const supabase = createClient()
+      
+      // Handle case where Supabase is not configured
+      if (!supabase) {
+        // Skip database insert and proceed to checkout
+        setStep("checkout")
+        return
+      }
+      
+      const serviceNames = selectedServices.map(s => s.name).join(", ")
+      const addOnNames = selectedAddOns.map(a => a.name).join(", ")
+      
+      const { error } = await supabase.from("bookings").insert({
+        customer_name: formData.customerName,
+        pet_name: formData.petName,
+        email: formData.email,
+        phone: formData.phone,
+        service: serviceNames + (addOnNames ? ` + Add-ons: ${addOnNames}` : ""),
+        booking_date: selectedDate.toISOString().split("T")[0],
+        booking_time: selectedTime,
+        notes: formData.notes,
+        status: "pending",
+        user_id: user?.id || null,
+      })
+      
+      if (error) throw error
+      
+      setStep("checkout")
+    } catch (error) {
+      console.error("Error submitting booking:", error)
+      setSubmitStatus("error")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleBackToServices = () => {
+    setStep("select-services")
   }
 
   const handleBackToAddOns = () => {
     setStep("add-ons")
   }
 
-  const getTotalPrice = () => {
-    const mainPrice = selectedService?.priceInCents || 0
-    const addOnsPrice = selectedAddOns.reduce((sum, addOn) => sum + addOn.priceInCents, 0)
-    return mainPrice + addOnsPrice
-  }
-
-  const getAllProductIds = () => {
-    const ids = selectedService ? [selectedService.id] : []
-    return [...ids, ...selectedAddOns.map(a => a.id)]
-  }
-
-  const handleBackToServices = () => {
-    setSelectedService(null)
-    setSelectedAddOns([])
-    setStep("select-service")
-  }
-
   const handleBackToDetails = () => {
     setStep("booking-details")
   }
 
+  const handleStartOver = () => {
+    setSelectedServices([])
+    setSelectedAddOns([])
+    setStep("select-services")
+  }
+
+  const getTotalPrice = () => {
+    const servicesPrice = selectedServices.reduce((sum, s) => sum + s.priceInCents, 0)
+    const addOnsPrice = selectedAddOns.reduce((sum, a) => sum + a.priceInCents, 0)
+    return servicesPrice + addOnsPrice
+  }
+
+  const getAllProductIds = () => {
+    return [...selectedServices.map(s => s.id), ...selectedAddOns.map(a => a.id)]
+  }
+
+  const mainServices = getMainServices()
   const filteredServices = selectedCategory 
-    ? SERVICES.filter(s => s.category === selectedCategory)
-    : SERVICES
+    ? mainServices.filter(s => s.category === selectedCategory)
+    : mainServices
 
   const getCategoryIcon = (category: string) => {
     const cat = serviceCategories.find(c => c.value === category)
@@ -358,7 +378,7 @@ export function ContactSection() {
             Schedule Your Appointment
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Choose your preferred service, date, and time. Complete your booking with secure payment.
+            Choose your preferred services, date, and time. Complete your booking with secure payment.
           </p>
         </div>
 
@@ -386,15 +406,18 @@ export function ContactSection() {
           {/* Booking Form */}
           <div id="book" className="bg-card rounded-2xl md:rounded-3xl p-5 md:p-8 border border-border">
             
-            {/* Step 1: Select Service */}
-            {step === "select-service" && (
+            {/* Step 1: Select Services */}
+            {step === "select-services" && (
               <>
-                <h3 className="font-serif text-xl md:text-2xl font-semibold text-foreground mb-4 md:mb-6">
-                  Select a Service
+                <h3 className="font-serif text-xl md:text-2xl font-semibold text-foreground mb-2">
+                  Select Services
                 </h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  Choose one or more services for your pet
+                </p>
                 
                 {/* Category Filter */}
-                <div className="flex flex-wrap gap-2 mb-6">
+                <div className="flex flex-wrap gap-2 mb-4">
                   <button
                     onClick={() => setSelectedCategory("")}
                     className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
@@ -420,18 +443,59 @@ export function ContactSection() {
                   ))}
                 </div>
                 
+                {/* Selected Services Summary */}
+                {selectedServices.length > 0 && (
+                  <div className="bg-primary/10 rounded-xl p-3 mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-foreground">
+                        {selectedServices.length} service{selectedServices.length > 1 ? "s" : ""} selected
+                      </span>
+                      <span className="font-bold text-primary">
+                        {formatPrice(selectedServices.reduce((sum, s) => sum + s.priceInCents, 0))}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedServices.map(service => (
+                        <span 
+                          key={service.id}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-primary/20 rounded-full text-xs text-foreground"
+                        >
+                          {service.name}
+                          <button
+                            onClick={() => handleServiceToggle(service)}
+                            className="hover:text-destructive transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 {/* Services List */}
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 mb-4">
                   {filteredServices.map((service) => {
                     const Icon = getCategoryIcon(service.category)
+                    const isSelected = selectedServices.some(s => s.id === service.id)
                     return (
                       <button
                         key={service.id}
-                        onClick={() => handleServiceSelect(service)}
-                        className="w-full flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all text-left cursor-pointer"
+                        onClick={() => handleServiceToggle(service)}
+                        className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left cursor-pointer ${
+                          isSelected
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:border-primary hover:bg-primary/5"
+                        }`}
                       >
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <Icon className="w-5 h-5 text-primary" />
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                          isSelected ? "bg-primary text-primary-foreground" : "bg-primary/10"
+                        }`}>
+                          {isSelected ? (
+                            <Check className="w-5 h-5" />
+                          ) : (
+                            <Icon className="w-5 h-5 text-primary" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-foreground">{service.name}</p>
@@ -447,11 +511,22 @@ export function ContactSection() {
                     )
                   })}
                 </div>
+                
+                {/* Continue Button */}
+                <Button 
+                  onClick={handleProceedToAddOns}
+                  size="lg" 
+                  className="w-full rounded-full text-lg"
+                  disabled={selectedServices.length === 0}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Continue to Add-Ons
+                </Button>
               </>
             )}
 
-            {/* Step 2: Booking Details */}
-            {step === "booking-details" && selectedService && (
+            {/* Step 2: Add-Ons */}
+            {step === "add-ons" && (
               <>
                 <button
                   onClick={handleBackToServices}
@@ -461,13 +536,124 @@ export function ContactSection() {
                   Back to services
                 </button>
                 
+                <h3 className="font-serif text-xl md:text-2xl font-semibold text-foreground mb-2">
+                  Enhance Your Visit
+                </h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  Add extra services to make your pet's experience even better
+                </p>
+                
+                {/* Selected Services Summary */}
                 <div className="bg-primary/10 rounded-xl p-4 mb-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-foreground">{selectedService.name}</p>
-                      <p className="text-sm text-muted-foreground">{selectedService.description}</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Selected Services:</p>
+                  {selectedServices.map(service => (
+                    <div key={service.id} className="flex items-center justify-between py-1">
+                      <span className="text-sm text-foreground">{service.name}</span>
+                      <span className="text-sm font-medium text-primary">{formatPrice(service.priceInCents)}</span>
                     </div>
-                    <p className="font-bold text-primary text-xl">{formatPrice(selectedService.priceInCents)}</p>
+                  ))}
+                </div>
+                
+                {/* Add-Ons List */}
+                <div className="space-y-3 max-h-[280px] overflow-y-auto pr-2 mb-6">
+                  {getAddOns().map((addOn) => {
+                    const isSelected = selectedAddOns.some(a => a.id === addOn.id)
+                    return (
+                      <button
+                        key={addOn.id}
+                        onClick={() => handleAddOnToggle(addOn)}
+                        className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left cursor-pointer ${
+                          isSelected 
+                            ? "border-primary bg-primary/10" 
+                            : "border-border hover:border-primary hover:bg-primary/5"
+                        }`}
+                      >
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                          isSelected 
+                            ? "bg-primary text-primary-foreground" 
+                            : "bg-secondary"
+                        }`}>
+                          {isSelected ? (
+                            <Check className="w-4 h-4" />
+                          ) : (
+                            <Plus className="w-4 h-4" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground">{addOn.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">{addOn.description}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-semibold text-primary">{formatPrice(addOn.priceInCents)}</p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+                
+                {/* Selected Add-Ons Summary */}
+                {selectedAddOns.length > 0 && (
+                  <div className="bg-secondary/50 rounded-xl p-4 mb-6">
+                    <p className="text-sm font-medium text-foreground mb-2">Selected Add-Ons:</p>
+                    <div className="space-y-2">
+                      {selectedAddOns.map(addOn => (
+                        <div key={addOn.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleAddOnToggle(addOn)}
+                              className="text-muted-foreground hover:text-destructive transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                            <span className="text-sm text-foreground">{addOn.name}</span>
+                          </div>
+                          <span className="text-sm font-medium text-primary">{formatPrice(addOn.priceInCents)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Total and Proceed Button */}
+                <div className="border-t border-border pt-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-lg font-medium text-foreground">Subtotal</span>
+                    <span className="text-2xl font-bold text-primary">{formatPrice(getTotalPrice())}</span>
+                  </div>
+                  <Button 
+                    onClick={handleProceedToDetails}
+                    size="lg" 
+                    className="w-full rounded-full text-lg"
+                  >
+                    Continue to Booking Details
+                  </Button>
+                  <p className="text-center text-sm text-muted-foreground mt-3">
+                    No add-ons needed? Just continue to booking details.
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* Step 3: Booking Details */}
+            {step === "booking-details" && (
+              <>
+                <button
+                  onClick={handleBackToAddOns}
+                  className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to add-ons
+                </button>
+                
+                {/* Order Summary */}
+                <div className="bg-primary/10 rounded-xl p-4 mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-semibold text-foreground">Your Order</p>
+                    <p className="font-bold text-primary text-xl">{formatPrice(getTotalPrice())}</p>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {selectedServices.length} service{selectedServices.length > 1 ? "s" : ""}
+                    {selectedAddOns.length > 0 && ` + ${selectedAddOns.length} add-on${selectedAddOns.length > 1 ? "s" : ""}`}
                   </div>
                 </div>
 
@@ -500,7 +686,7 @@ export function ContactSection() {
                   </div>
                 )}
                 
-                <form onSubmit={handleProceedToAddOns} className="space-y-4">
+                <form onSubmit={handleProceedToCheckout} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <Input
                       type="text"
@@ -594,8 +780,8 @@ export function ContactSection() {
                       </>
                     ) : (
                       <>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Continue to Add-Ons
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Proceed to Payment - {formatPrice(getTotalPrice())}
                       </>
                     )}
                   </Button>
@@ -603,8 +789,8 @@ export function ContactSection() {
               </>
             )}
 
-            {/* Step 3: Add-Ons */}
-            {step === "add-ons" && selectedService && (
+            {/* Step 4: Checkout */}
+            {step === "checkout" && (
               <>
                 <button
                   onClick={handleBackToDetails}
@@ -612,119 +798,6 @@ export function ContactSection() {
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Back to details
-                </button>
-                
-                <h3 className="font-serif text-xl md:text-2xl font-semibold text-foreground mb-2">
-                  Enhance Your Visit
-                </h3>
-                <p className="text-muted-foreground mb-6">
-                  Add extra services to make your pet's experience even better
-                </p>
-                
-                {/* Selected Main Service */}
-                <div className="bg-primary/10 rounded-xl p-4 mb-6">
-                  <div className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-primary" />
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground">{selectedService.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedDate?.toLocaleDateString()} at {selectedTime}
-                      </p>
-                    </div>
-                    <p className="font-bold text-primary">{formatPrice(selectedService.priceInCents)}</p>
-                  </div>
-                </div>
-                
-                {/* Add-Ons List */}
-                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 mb-6">
-                  {getAddOns().map((addOn) => {
-                    const isSelected = selectedAddOns.some(a => a.id === addOn.id)
-                    return (
-                      <button
-                        key={addOn.id}
-                        onClick={() => handleAddOnToggle(addOn)}
-                        className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left cursor-pointer ${
-                          isSelected 
-                            ? "border-primary bg-primary/10" 
-                            : "border-border hover:border-primary hover:bg-primary/5"
-                        }`}
-                      >
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-                          isSelected 
-                            ? "bg-primary text-primary-foreground" 
-                            : "bg-secondary"
-                        }`}>
-                          {isSelected ? (
-                            <Check className="w-4 h-4" />
-                          ) : (
-                            <Plus className="w-4 h-4" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground">{addOn.name}</p>
-                          <p className="text-sm text-muted-foreground truncate">{addOn.description}</p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="font-semibold text-primary">{formatPrice(addOn.priceInCents)}</p>
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-                
-                {/* Selected Add-Ons Summary */}
-                {selectedAddOns.length > 0 && (
-                  <div className="bg-secondary/50 rounded-xl p-4 mb-6">
-                    <p className="text-sm font-medium text-foreground mb-2">Selected Add-Ons:</p>
-                    <div className="space-y-2">
-                      {selectedAddOns.map(addOn => (
-                        <div key={addOn.id} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleAddOnToggle(addOn)}
-                              className="text-muted-foreground hover:text-destructive transition-colors"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                            <span className="text-sm text-foreground">{addOn.name}</span>
-                          </div>
-                          <span className="text-sm font-medium text-primary">{formatPrice(addOn.priceInCents)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Total and Proceed Button */}
-                <div className="border-t border-border pt-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-lg font-medium text-foreground">Total</span>
-                    <span className="text-2xl font-bold text-primary">{formatPrice(getTotalPrice())}</span>
-                  </div>
-                  <Button 
-                    onClick={handleProceedToCheckout}
-                    size="lg" 
-                    className="w-full rounded-full text-lg"
-                  >
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Proceed to Payment
-                  </Button>
-                  <p className="text-center text-sm text-muted-foreground mt-3">
-                    No add-ons needed? Just proceed to payment.
-                  </p>
-                </div>
-              </>
-            )}
-
-            {/* Step 4: Checkout */}
-            {step === "checkout" && selectedService && (
-              <>
-                <button
-                  onClick={handleBackToAddOns}
-                  className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Back to add-ons
                 </button>
                 
                 <h3 className="font-serif text-xl md:text-2xl font-semibold text-foreground mb-2">
@@ -736,32 +809,37 @@ export function ContactSection() {
                 
                 {/* Order Summary */}
                 <div className="bg-primary/10 rounded-xl p-4 mb-6 space-y-3">
-                  {/* Main Service */}
-                  <div className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-primary" />
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground">{selectedService.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedDate?.toLocaleDateString()} at {selectedTime}
-                      </p>
-                    </div>
-                    <p className="font-bold text-primary">{formatPrice(selectedService.priceInCents)}</p>
+                  {/* Services */}
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Services</p>
+                    {selectedServices.map(service => (
+                      <div key={service.id} className="flex items-center justify-between py-1">
+                        <span className="text-sm text-foreground">{service.name}</span>
+                        <span className="text-sm font-medium text-primary">{formatPrice(service.priceInCents)}</span>
+                      </div>
+                    ))}
                   </div>
                   
                   {/* Add-Ons */}
                   {selectedAddOns.length > 0 && (
-                    <>
-                      <div className="border-t border-border/50 pt-3">
-                        <p className="text-xs font-medium text-muted-foreground mb-2">Add-Ons</p>
-                        {selectedAddOns.map(addOn => (
-                          <div key={addOn.id} className="flex items-center justify-between py-1">
-                            <span className="text-sm text-foreground">{addOn.name}</span>
-                            <span className="text-sm font-medium text-primary">{formatPrice(addOn.priceInCents)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </>
+                    <div className="border-t border-border/50 pt-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Add-Ons</p>
+                      {selectedAddOns.map(addOn => (
+                        <div key={addOn.id} className="flex items-center justify-between py-1">
+                          <span className="text-sm text-foreground">{addOn.name}</span>
+                          <span className="text-sm font-medium text-primary">{formatPrice(addOn.priceInCents)}</span>
+                        </div>
+                      ))}
+                    </div>
                   )}
+                  
+                  {/* Booking Details */}
+                  <div className="border-t border-border/50 pt-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Appointment</p>
+                    <p className="text-sm text-foreground">
+                      {selectedDate?.toLocaleDateString()} at {selectedTime}
+                    </p>
+                  </div>
                   
                   {/* Total */}
                   <div className="border-t border-border/50 pt-3 flex items-center justify-between">

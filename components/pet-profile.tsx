@@ -778,6 +778,67 @@ function InlineVaccinationForm({
     notes: "",
   })
   const [customVaccine, setCustomVaccine] = useState("")
+  const [documentPathname, setDocumentPathname] = useState<string | null>(null)
+  const [documentUploading, setDocumentUploading] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileUpload = async (file: File) => {
+    if (!file) return
+    
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
+    if (!allowedTypes.includes(file.type)) {
+      alert('Please upload a PDF or image file (JPEG, PNG)')
+      return
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB')
+      return
+    }
+    
+    setDocumentUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', 'vaccinations')
+      
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        setDocumentPathname(data.pathname)
+      } else {
+        alert('Failed to upload document')
+      }
+    } catch (err) {
+      alert('Failed to upload document')
+    } finally {
+      setDocumentUploading(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFileUpload(file)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -786,7 +847,7 @@ function InlineVaccinationForm({
       date_administered: formData.date_administered,
       expiration_date: formData.expiration_date || null,
       notes: formData.notes || null,
-      document_pathname: null, // Documents can be added after pet creation
+      document_pathname: documentPathname,
     })
   }
 
@@ -846,6 +907,68 @@ function InlineVaccinationForm({
         </div>
       </div>
       
+      {/* File Drop Zone */}
+      <div>
+        <label className="block text-xs font-medium mb-1">Vaccination Document (optional)</label>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) handleFileUpload(file)
+          }}
+          accept=".pdf,.jpg,.jpeg,.png"
+          className="hidden"
+        />
+        {documentPathname ? (
+          <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-green-600" />
+              <span className="text-sm text-green-700">Document uploaded</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDocumentPathname(null)}
+              className="p-1 hover:bg-green-100 rounded"
+            >
+              <X className="w-4 h-4 text-green-600" />
+            </button>
+          </div>
+        ) : (
+          <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={() => fileInputRef.current?.click()}
+            className={`
+              p-4 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors
+              ${isDragging 
+                ? 'border-primary bg-primary/10' 
+                : 'border-border hover:border-primary/50 hover:bg-secondary/50'
+              }
+              ${documentUploading ? 'opacity-50 pointer-events-none' : ''}
+            `}
+          >
+            {documentUploading ? (
+              <div className="flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm text-muted-foreground">Uploading...</span>
+              </div>
+            ) : (
+              <>
+                <Upload className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">
+                  Drop file here or click to upload
+                </p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  PDF, JPG, PNG (max 5MB)
+                </p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+      
       <div className="flex gap-2">
         <Button type="button" variant="outline" size="sm" onClick={onCancel} className="flex-1">
           Cancel
@@ -854,7 +977,7 @@ function InlineVaccinationForm({
           type="button" 
           size="sm" 
           onClick={handleSubmit}
-          disabled={!formData.vaccine_name || !formData.date_administered || (formData.vaccine_name === "other" && !customVaccine)}
+          disabled={!formData.vaccine_name || !formData.date_administered || (formData.vaccine_name === "other" && !customVaccine) || documentUploading}
           className="flex-1"
         >
           Add

@@ -31,6 +31,12 @@ export default function SignUpPage() {
     setIsLoading(true)
     setError(null)
 
+    if (!supabase) {
+      setError('Authentication service is not configured. Please try again later.')
+      setIsLoading(false)
+      return
+    }
+
     if (password !== repeatPassword) {
       setError('Passwords do not match')
       setIsLoading(false)

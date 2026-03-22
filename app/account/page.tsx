@@ -20,6 +20,12 @@ export default function AccountPage() {
   useEffect(() => {
     const supabase = createClient()
     
+    if (!supabase) {
+      setIsLoading(false)
+      router.push("/auth/login")
+      return
+    }
+    
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user)
       setIsLoading(false)
@@ -31,6 +37,7 @@ export default function AccountPage() {
   
   const handleSignOut = async () => {
     const supabase = createClient()
+    if (!supabase) return
     await supabase.auth.signOut()
     router.push("/")
     router.refresh()
@@ -199,6 +206,10 @@ function BookingsTab({ userId }: { userId: string }) {
   useEffect(() => {
     const fetchBookings = async () => {
       const supabase = createClient()
+      if (!supabase) {
+        setIsLoading(false)
+        return
+      }
       const { data } = await supabase
         .from("bookings")
         .select("*")

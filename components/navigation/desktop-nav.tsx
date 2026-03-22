@@ -40,6 +40,7 @@ export function DesktopNav() {
   
   const handleSignOut = async () => {
     const supabase = createClient()
+    if (!supabase) return
     await supabase.auth.signOut()
     router.refresh()
   }

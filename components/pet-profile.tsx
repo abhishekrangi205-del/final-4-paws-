@@ -145,14 +145,32 @@ export function PetProfileManager() {
       {showAddPet && (
         <PetForm 
           onSave={async (data) => {
-            const res = await fetch("/api/pets", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(data),
-            })
-            if (res.ok) {
-              setShowAddPet(false)
-              fetchPets()
+            try {
+              const res = await fetch("/api/pets", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data.pet),
+              })
+              if (res.ok) {
+                const newPet = await res.json()
+                // Add vaccinations if any were included
+                if (data.vaccinations && data.vaccinations.length > 0) {
+                  for (const vax of data.vaccinations) {
+                    await fetch(`/api/pets/${newPet.id}/vaccinations`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(vax),
+                    })
+                  }
+                }
+                setShowAddPet(false)
+                fetchPets()
+              } else {
+                const errorData = await res.json()
+                setError(errorData.error || "Failed to add pet")
+              }
+            } catch (err) {
+              setError("Failed to add pet. Please make sure the database is set up.")
             }
           }}
           onCancel={() => setShowAddPet(false)}
@@ -167,7 +185,7 @@ export function PetProfileManager() {
             const res = await fetch(`/api/pets/${editingPet.id}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(data),
+              body: JSON.stringify(data.pet),
             })
             if (res.ok) {
               setEditingPet(null)
@@ -383,13 +401,21 @@ function PetCard({
   )
 }
 
+type VaccinationInput = {
+  vaccine_name: string
+  date_administered: string
+  expiration_date: string | null
+  notes: string | null
+  document_pathname: string | null
+}
+
 function PetForm({ 
   pet, 
   onSave, 
   onCancel 
 }: { 
   pet?: Pet
-  onSave: (data: Partial<Pet>) => void
+  onSave: (data: { pet: Partial<Pet>; vaccinations?: VaccinationInput[] }) => void
   onCancel: () => void
 }) {
   const [formData, setFormData] = useState({
@@ -411,6 +437,8 @@ function PetForm({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [imageUploading, setImageUploading] = useState(false)
   const [profileImage, setProfileImage] = useState<string | null>(pet?.profile_image_url || null)
+  const [vaccinations, setVaccinations] = useState<VaccinationInput[]>([])
+  const [showVaxForm, setShowVaxForm] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -445,21 +473,24 @@ function PetForm({
     setIsSubmitting(true)
     
     await onSave({
-      name: formData.name,
-      breed: formData.breed || null,
-      age_years: formData.age_years ? parseInt(formData.age_years) : null,
-      age_months: formData.age_months ? parseInt(formData.age_months) : null,
-      weight_lbs: formData.weight_lbs ? parseFloat(formData.weight_lbs) : null,
-      size: (formData.size as "small" | "large") || null,
-      gender: (formData.gender as "male" | "female") || null,
-      spayed_neutered: formData.spayed_neutered,
-      medical_notes: formData.medical_notes || null,
-      special_instructions: formData.special_instructions || null,
-      emergency_contact_name: formData.emergency_contact_name || null,
-      emergency_contact_phone: formData.emergency_contact_phone || null,
-      vet_name: formData.vet_name || null,
-      vet_phone: formData.vet_phone || null,
-      profile_image_url: profileImage,
+      pet: {
+        name: formData.name,
+        breed: formData.breed || null,
+        age_years: formData.age_years ? parseInt(formData.age_years) : null,
+        age_months: formData.age_months ? parseInt(formData.age_months) : null,
+        weight_lbs: formData.weight_lbs ? parseFloat(formData.weight_lbs) : null,
+        size: (formData.size as "small" | "large") || null,
+        gender: (formData.gender as "male" | "female") || null,
+        spayed_neutered: formData.spayed_neutered,
+        medical_notes: formData.medical_notes || null,
+        special_instructions: formData.special_instructions || null,
+        emergency_contact_name: formData.emergency_contact_name || null,
+        emergency_contact_phone: formData.emergency_contact_phone || null,
+        vet_name: formData.vet_name || null,
+        vet_phone: formData.vet_phone || null,
+        profile_image_url: profileImage,
+      },
+      vaccinations: vaccinations.length > 0 ? vaccinations : undefined,
     })
     
     setIsSubmitting(false)
@@ -656,6 +687,65 @@ function PetForm({
             </div>
           </div>
           
+          {/* Vaccination Records - Only for new pets */}
+          {!pet && (
+            <div className="space-y-3 border-t border-border pt-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-sm text-foreground flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-primary" />
+                  Vaccination Records
+                </h4>
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => setShowVaxForm(true)}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Vaccine
+                </Button>
+              </div>
+              
+              {vaccinations.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-3 bg-secondary/30 rounded-lg">
+                  No vaccination records added yet (optional)
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {vaccinations.map((vax, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+                      <div>
+                        <span className="font-medium text-sm">{vax.vaccine_name}</span>
+                        <p className="text-xs text-muted-foreground">
+                          Given: {new Date(vax.date_administered).toLocaleDateString()}
+                          {vax.expiration_date && ` • Expires: ${new Date(vax.expiration_date).toLocaleDateString()}`}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setVaccinations(prev => prev.filter((_, i) => i !== idx))}
+                        className="p-1.5 hover:bg-secondary rounded"
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Inline Vaccination Form */}
+              {showVaxForm && (
+                <InlineVaccinationForm
+                  onAdd={(vax) => {
+                    setVaccinations(prev => [...prev, vax])
+                    setShowVaxForm(false)
+                  }}
+                  onCancel={() => setShowVaxForm(false)}
+                />
+              )}
+            </div>
+          )}
+          
           {/* Actions */}
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
@@ -669,6 +759,106 @@ function PetForm({
             </Button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+function InlineVaccinationForm({
+  onAdd,
+  onCancel
+}: {
+  onAdd: (vax: VaccinationInput) => void
+  onCancel: () => void
+}) {
+  const [formData, setFormData] = useState({
+    vaccine_name: "",
+    date_administered: "",
+    expiration_date: "",
+    notes: "",
+  })
+  const [customVaccine, setCustomVaccine] = useState("")
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onAdd({
+      vaccine_name: formData.vaccine_name === "other" ? customVaccine : formData.vaccine_name,
+      date_administered: formData.date_administered,
+      expiration_date: formData.expiration_date || null,
+      notes: formData.notes || null,
+      document_pathname: null, // Documents can be added after pet creation
+    })
+  }
+
+  return (
+    <div className="p-4 bg-secondary/50 rounded-lg space-y-3 border border-border">
+      <div className="flex items-center justify-between">
+        <span className="font-medium text-sm">Add Vaccination</span>
+        <button type="button" onClick={onCancel} className="p-1 hover:bg-secondary rounded">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      
+      <div>
+        <label className="block text-xs font-medium mb-1">Vaccine Name *</label>
+        <select
+          required
+          value={formData.vaccine_name}
+          onChange={(e) => setFormData(prev => ({ ...prev, vaccine_name: e.target.value }))}
+          className="w-full px-3 py-2 text-sm rounded-lg border border-input bg-background"
+        >
+          <option value="">Select vaccine...</option>
+          {commonVaccines.map(v => (
+            <option key={v} value={v}>{v}</option>
+          ))}
+          <option value="other">Other</option>
+        </select>
+        {formData.vaccine_name === "other" && (
+          <Input
+            className="mt-2 text-sm"
+            placeholder="Enter vaccine name"
+            value={customVaccine}
+            onChange={(e) => setCustomVaccine(e.target.value)}
+            required
+          />
+        )}
+      </div>
+      
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-xs font-medium mb-1">Date Given *</label>
+          <Input
+            type="date"
+            required
+            className="text-sm"
+            value={formData.date_administered}
+            onChange={(e) => setFormData(prev => ({ ...prev, date_administered: e.target.value }))}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium mb-1">Expiration Date</label>
+          <Input
+            type="date"
+            className="text-sm"
+            value={formData.expiration_date}
+            onChange={(e) => setFormData(prev => ({ ...prev, expiration_date: e.target.value }))}
+          />
+        </div>
+      </div>
+      
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onCancel} className="flex-1">
+          Cancel
+        </Button>
+        <Button 
+          type="button" 
+          size="sm" 
+          onClick={handleSubmit}
+          disabled={!formData.vaccine_name || !formData.date_administered || (formData.vaccine_name === "other" && !customVaccine)}
+          className="flex-1"
+        >
+          Add
+        </Button>
       </div>
     </div>
   )

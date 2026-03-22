@@ -2,51 +2,71 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
 export async function GET() {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  try {
+    const supabase = await createClient()
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
+    const { data: pets, error } = await supabase
+      .from("pets")
+      .select(`
+        *,
+        vaccination_records (*)
+      `)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+    
+    if (error) {
+      console.error("Error fetching pets:", error)
+      // Check if table doesn't exist
+      if (error.code === "PGRST205" || error.message.includes("does not exist")) {
+        return NextResponse.json({ error: "The pets table has not been created yet. Please run the database migration." }, { status: 500 })
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    
+    return NextResponse.json(pets || [])
+  } catch (err) {
+    console.error("Unexpected error in GET /api/pets:", err)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-  
-  const { data: pets, error } = await supabase
-    .from("pets")
-    .select(`
-      *,
-      vaccination_records (*)
-    `)
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-  
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-  
-  return NextResponse.json(pets)
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  try {
+    const supabase = await createClient()
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
+    const body = await request.json()
+    
+    const { data: pet, error } = await supabase
+      .from("pets")
+      .insert({
+        ...body,
+        user_id: user.id,
+      })
+      .select()
+      .single()
+    
+    if (error) {
+      console.error("Error creating pet:", error)
+      // Check if table doesn't exist
+      if (error.code === "PGRST205" || error.message.includes("does not exist")) {
+        return NextResponse.json({ error: "The pets table has not been created yet. Please run the database migration in Supabase SQL Editor." }, { status: 500 })
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    
+    return NextResponse.json(pet)
+  } catch (err) {
+    console.error("Unexpected error in POST /api/pets:", err)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-  
-  const body = await request.json()
-  
-  const { data: pet, error } = await supabase
-    .from("pets")
-    .insert({
-      ...body,
-      user_id: user.id,
-    })
-    .select()
-    .single()
-  
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-  
-  return NextResponse.json(pet)
 }

@@ -809,6 +809,42 @@ export function ContactSection() {
                       <p className="font-medium text-foreground">
                         By checking below, you are agreeing that you certify and understand and agree with this policy, and forever release All 4 Paws Playcare Inc., and its operators and staff of all liability and responsibilities for potential accidents, injuries, and/or death.
                       </p>
+                      
+                      <div className="border-t border-border pt-4 mt-4">
+                        <p className="font-bold text-foreground text-center mb-3">LIABILITY WAIVER AND HOLD HARMLESS AGREEMENT</p>
+                        
+                        <p>
+                          BY SIGNING THIS AGREEMENT, THE ANIMAL(S) OWNER AGREES TO INDEMNIFY AND HOLD ALL 4 PAWS PLAYCARE INC., AND ALL EMPLOYEES AND AGENTS OF ALL 4 PAWS PLAYCARE INC. HARMLESS FROM AND AGAINST ALL CLAIMS, DEMANDS OR CAUSES OF ACTION. LIABILITY, LOSS, DAMAGES, OR EXPENSES, INCLUDING ATTORNEYS FEES AND COSTS, ARISING OUT OF OR IN THE COURSE OF ANY ANIMAL TEETH CLEANING ACTIVITIES.
+                        </p>
+                        
+                        <p>
+                          THIS INDEMNITY AND HOLD HARMLESS AGREEMENT SHALL INCLUDE COMPANIES OR ANY OF ITS EMPLOYEES, OFFICERS, OR SHAREHOLDERS FOR NEGLIGENCE AND/OR STRICT LIABILITY.
+                        </p>
+                        
+                        <p>
+                          WE WILL NOT USE HOMEOPATHIC REMEDIES, MEDICATION OR SEDATION TO CALM YOUR PET. SHOULD YOU OPT TO GIVE YOUR PUP ANY FORM OF MEDICATION (SUCH AS SPRAY, HEMP, OVER THE COUNTER MEDICATION, PRESCRIBED MEDICATION...), PLEASE MAKE SURE THIS IS NOT THE FIRST TIME GIVING IT TO THEM TO ENSURE THEY ARE NOT HAVING ANY REACTION WHILE WITH ALL 4 PAWS PLAYCARE INC. STAFF.
+                        </p>
+                        
+                        <p>
+                          TO RELEASE AND HOLD, ALL 4 PAWS PLAYCARE INC., ITS PRINCIPALS, OFFICERS, DIRECTORS, AGENTS AND/OR EMPLOYEES HARMLESS FROM AND AGAINST ANY CLAIMS, LIABILITIES, DEMANDS, ACTIONS OR CAUSES OF ACTION FOR ANY INJURIES, HARM, LOSS, INCONVENIENCE, OR DAMAGES HOWSOEVER SUFFERED ARISING FROM THE SERVICES PROVIDED.
+                        </p>
+                        
+                        <p>
+                          EVERY EFFORT WILL BE MADE TO CLEAN AND REMOVE ALL THE TARTAR (CALCULUS) FROM YOUR PET'S TEETH, WITHIN THE LIMITS AS PRESCRIBED BY STATUTE AND CASE LAW FOR A PERSON WHO IS NOT LICENSED TO PRACTICE VETERINARY MEDICINE. IT IS IMPORTANT TO NOTE THAT YOUR PET WILL BE AWAKE AND DEPENDING ON HOW MUCH THEY WIGGLE IT MAY BE IMPOSSIBLE TO REMOVE ALL TARTAR ABOVE THE GUM LINE FROM THEIR TEETH.
+                        </p>
+                        
+                        <p>
+                          WE STRIVE TO BE ON TIME FOR YOUR APPOINTMENT. WE HAVE NO CONTROL OVER HOW LONG THE DOG IN FRONT OF YOURS TAKES. PLEASE BE PATIENT.
+                        </p>
+                        
+                        <p>
+                          AS A PRECAUTIONARY, WE RECOMMEND ALL OF OUR CLIENTS TO CONSULT WITH THEIR VETERINARIAN, PRIOR TO AND/OR THEREAFTER THEIR COSMETIC TEETH CLEANING.
+                        </p>
+                        
+                        <p className="font-medium">
+                          NOTE: WE ARE NOT VETERINARIANS, AND THIS PROCEDURE SHOULD NOT BE CONSIDERED A VETERINARY CLEANING BUT A COSMETIC CLEANING ONLY.
+                        </p>
+                      </div>
                     </div>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input

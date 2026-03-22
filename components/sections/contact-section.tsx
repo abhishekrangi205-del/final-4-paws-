@@ -23,17 +23,14 @@ const contactInfo = [
   {
     icon: MapPin,
     title: "Visit Us",
-    details: ["123 Pet Paradise Lane", "Pawsville, CA 90210"],
+    details: ["1333 Hwy 69 North", "McCrea Heights, ON"],
+    link: "https://maps.google.com/?q=1333+Hwy+69+North+McCrea+Heights+ON",
   },
   {
     icon: Phone,
     title: "Call Us",
-    details: ["(555) 123-PAWS", "(555) 123-7297"],
-  },
-  {
-    icon: Mail,
-    title: "Email Us",
-    details: ["hello@all4pawsplaycare.com", "bookings@all4pawsplaycare.com"],
+    details: ["705-923-3355"],
+    link: "tel:7059233355",
   },
   {
     icon: Clock,
@@ -506,8 +503,8 @@ const getAllProductIds = () => {
           <div className="grid grid-cols-2 gap-3 md:gap-6">
             {contactInfo.map((info, index) => {
               const Icon = info.icon
-              return (
-                <div key={index} className="bg-card rounded-2xl md:rounded-3xl p-4 md:p-6 border border-border">
+              const content = (
+                <div className={`bg-card rounded-2xl md:rounded-3xl p-4 md:p-6 border border-border ${info.link ? 'hover:border-primary/50 transition-colors cursor-pointer' : ''}`}>
                   <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 md:mb-4">
                     <Icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
                   </div>
@@ -519,6 +516,16 @@ const getAllProductIds = () => {
                   ))}
                 </div>
               )
+              
+              if (info.link) {
+                return (
+                  <a key={index} href={info.link} target={info.link.startsWith('http') ? '_blank' : undefined} rel={info.link.startsWith('http') ? 'noopener noreferrer' : undefined}>
+                    {content}
+                  </a>
+                )
+              }
+              
+              return <div key={index}>{content}</div>
             })}
           </div>
 

@@ -54,7 +54,7 @@ export function HeroSection() {
   }
 
   return (
-    <section id="hero" className="relative min-h-screen pt-0 md:pt-20">
+    <section id="hero" className="relative min-h-screen pt-14 md:pt-20">
       {/* Mobile: Swipeable Gallery */}
       <div className="md:hidden">
         <div className="overflow-hidden" ref={mobileEmblaRef}>

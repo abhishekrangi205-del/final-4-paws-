@@ -30,7 +30,7 @@ export default function LoginPage() {
     setError(null)
 
     if (!supabase) {
-      setError('Authentication service is not configured. Please try again later.')
+      setError('Unable to connect to authentication service. Please refresh the page and try again.')
       setIsLoading(false)
       return
     }
@@ -57,7 +57,7 @@ export default function LoginPage() {
           <div className="flex items-center justify-center gap-2">
             <Link href="/" className="flex items-center gap-2">
               <PawPrint className="h-8 w-8 text-primary" />
-              <span className="font-serif text-2xl font-bold text-foreground">Paws & Bubbles</span>
+              <span className="font-serif text-2xl font-bold text-foreground">All 4 Paws Playcare</span>
             </Link>
           </div>
           <Card className="border-border">

@@ -6,10 +6,39 @@ export interface ServiceProduct {
   category: "pet-day-care" | "pet-boarding" | "grooming" | "teeth-cleaning"
   petSize?: "small" | "large" | "any"
   isAddOn?: boolean
+  daycareType?: "assessment" | "half-day" | "full-day" | "extended-day" | "express-play"
+  maxHours?: number
+  requiresAssessment?: boolean
+}
+
+// Daycare service configuration
+export const DAYCARE_CONFIG = {
+  "assessment": { maxHours: 8, label: "Assessment Day", requiresAssessment: false },
+  "half-day": { maxHours: 5, label: "Half Day", requiresAssessment: true },
+  "full-day": { maxHours: 9, label: "Full Day", requiresAssessment: true },
+  "extended-day": { maxHours: 12, label: "Extended Day", requiresAssessment: true },
+  "express-play": { maxHours: 2, label: "Express Play", minHour: 6, maxHour: 18, requiresAssessment: true },
+}
+
+// Pricing by size for daycare services
+export const DAYCARE_PRICING = {
+  "half-day": { small: 3400, large: 3800 },
+  "full-day": { small: 4000, large: 4400 },
+  "extended-day": { small: 4400, large: 4900 },
+  "express-play": { small: 2500, large: 2500 }, // Flat rate
+  "assessment": { small: 8900, large: 8900 }, // Flat rate
+}
+
+// Additional dog pricing
+export const ADDITIONAL_DOG_PRICING = {
+  "half-day": { small: 2400, large: 2800 },
+  "full-day": { small: 3000, large: 3400 },
+  "extended-day": { small: 3400, large: 3900 },
+  "express-play": { small: 1500, large: 1500 },
 }
 
 export const SERVICES: ServiceProduct[] = [
-  // Pet Day Care
+  // Pet Day Care - These are now handled dynamically with size selection
   {
     id: "daycare-assessment",
     name: "Assessment Day",
@@ -17,62 +46,53 @@ export const SERVICES: ServiceProduct[] = [
     priceInCents: 8900,
     category: "pet-day-care",
     petSize: "any",
+    daycareType: "assessment",
+    maxHours: 8,
+    requiresAssessment: false,
   },
   {
-    id: "daycare-half-small",
-    name: "Half Day (Small Pet)",
-    description: "Sessions up to 5 hours for small pets",
-    priceInCents: 3400,
-    category: "pet-day-care",
-    petSize: "small",
-  },
-  {
-    id: "daycare-half-large",
-    name: "Half Day (Large Pet)",
-    description: "Sessions up to 5 hours for large pets",
-    priceInCents: 3800,
-    category: "pet-day-care",
-    petSize: "large",
-  },
-  {
-    id: "daycare-full-small",
-    name: "Full Day (Small Pet)",
-    description: "Sessions up to 9 hours for small pets",
-    priceInCents: 4000,
-    category: "pet-day-care",
-    petSize: "small",
-  },
-  {
-    id: "daycare-full-large",
-    name: "Full Day (Large Pet)",
-    description: "Sessions up to 9 hours for large pets",
-    priceInCents: 4400,
-    category: "pet-day-care",
-    petSize: "large",
-  },
-  {
-    id: "daycare-extended-small",
-    name: "Extended Day (Small Pet)",
-    description: "Sessions up to 12 hours for small pets",
-    priceInCents: 4400,
-    category: "pet-day-care",
-    petSize: "small",
-  },
-  {
-    id: "daycare-extended-large",
-    name: "Extended Day (Large Pet)",
-    description: "Sessions up to 12 hours for large pets",
-    priceInCents: 4900,
-    category: "pet-day-care",
-    petSize: "large",
-  },
-  {
-    id: "daycare-express",
-    name: "Express Play",
-    description: "Max 2 hours, any day 6am-6pm",
-    priceInCents: 2500,
+    id: "daycare-half-day",
+    name: "Half Day",
+    description: "Sessions up to 5 hours",
+    priceInCents: 3400, // Base price (small), updated dynamically
     category: "pet-day-care",
     petSize: "any",
+    daycareType: "half-day",
+    maxHours: 5,
+    requiresAssessment: true,
+  },
+  {
+    id: "daycare-full-day",
+    name: "Full Day",
+    description: "Sessions up to 9 hours",
+    priceInCents: 4000, // Base price (small), updated dynamically
+    category: "pet-day-care",
+    petSize: "any",
+    daycareType: "full-day",
+    maxHours: 9,
+    requiresAssessment: true,
+  },
+  {
+    id: "daycare-extended-day",
+    name: "Extended Day",
+    description: "Sessions up to 12 hours",
+    priceInCents: 4400, // Base price (small), updated dynamically
+    category: "pet-day-care",
+    petSize: "any",
+    daycareType: "extended-day",
+    maxHours: 12,
+    requiresAssessment: true,
+  },
+  {
+    id: "daycare-express-play",
+    name: "Express Play",
+    description: "Max 2 hours, available 6am-6pm only",
+    priceInCents: 2500, // Flat rate
+    category: "pet-day-care",
+    petSize: "any",
+    daycareType: "express-play",
+    maxHours: 2,
+    requiresAssessment: true,
   },
   
   // Pet Boarding

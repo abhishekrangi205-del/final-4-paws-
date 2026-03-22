@@ -5,7 +5,7 @@ import { MapPin, Phone, Mail, Clock, ChevronLeft, ChevronRight, Loader2, User, C
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { createClient } from "@/lib/supabase/client"
-import { SERVICES, formatPrice, getAddOns, getMainServices, type ServiceProduct } from "@/lib/products"
+import { SERVICES, formatPrice, getAddOns, getMainServices, DAYCARE_PRICING, ADDITIONAL_DOG_PRICING, DAYCARE_CONFIG, type ServiceProduct } from "@/lib/products"
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -202,6 +202,13 @@ export function ContactSection() {
   const [showAgreementWarning, setShowAgreementWarning] = useState(false)
   const [agreedToTeethCleaning, setAgreedToTeethCleaning] = useState(false)
   const [showTeethCleaningWarning, setShowTeethCleaningWarning] = useState(false)
+  // Daycare specific states
+  const [petSize, setPetSize] = useState<"small" | "large">("small")
+  const [additionalDog, setAdditionalDog] = useState(false)
+  const [dropOffTime, setDropOffTime] = useState<string>("")
+  const [pickUpTime, setPickUpTime] = useState<string>("")
+  const [bookedSlots, setBookedSlots] = useState<Array<{ time: string; dropOff: string; pickUp: string; service: string }>>([])
+  const [timeError, setTimeError] = useState<string>("")
   
   useEffect(() => {
     const supabase = createClient()
@@ -248,6 +255,104 @@ export function ContactSection() {
     }
   }, [])
   
+  // Generate time options (6 AM to 6 PM in 30-minute intervals)
+  const generateTimeOptions = () => {
+    const times: string[] = []
+    for (let hour = 6; hour <= 18; hour++) {
+      times.push(`${hour}:00`)
+      if (hour < 18) times.push(`${hour}:30`)
+    }
+    return times
+  }
+
+  const timeOptions = generateTimeOptions()
+
+  // Check if selected service is a daycare service
+  const hasDaycareSelected = () => {
+    return selectedServices.some(s => s.category === "pet-day-care")
+  }
+
+  // Get the selected daycare service
+  const getSelectedDaycareService = () => {
+    return selectedServices.find(s => s.category === "pet-day-care")
+  }
+
+  // Calculate daycare price based on size
+  const getDaycarePrice = (service: ServiceProduct, size: "small" | "large") => {
+    const daycareType = service.daycareType as keyof typeof DAYCARE_PRICING
+    if (daycareType && DAYCARE_PRICING[daycareType]) {
+      return DAYCARE_PRICING[daycareType][size]
+    }
+    return service.priceInCents
+  }
+
+  // Calculate additional dog price
+  const getAdditionalDogPrice = (service: ServiceProduct, size: "small" | "large") => {
+    const daycareType = service.daycareType as keyof typeof ADDITIONAL_DOG_PRICING
+    if (daycareType && ADDITIONAL_DOG_PRICING[daycareType]) {
+      return ADDITIONAL_DOG_PRICING[daycareType][size]
+    }
+    return 0
+  }
+
+  // Validate time selection based on service type
+  const validateTimeSelection = (dropOff: string, pickUp: string, service: ServiceProduct) => {
+    if (!dropOff || !pickUp) return ""
+    
+    const dropOffHour = parseInt(dropOff.split(":")[0])
+    const dropOffMin = parseInt(dropOff.split(":")[1]) || 0
+    const pickUpHour = parseInt(pickUp.split(":")[0])
+    const pickUpMin = parseInt(pickUp.split(":")[1]) || 0
+    
+    const dropOffTotal = dropOffHour + dropOffMin / 60
+    const pickUpTotal = pickUpHour + pickUpMin / 60
+    const duration = pickUpTotal - dropOffTotal
+    
+    if (duration <= 0) {
+      return "Pick-up time must be after drop-off time"
+    }
+    
+    const maxHours = service.maxHours || 8
+    if (duration > maxHours) {
+      return `${service.name} allows maximum ${maxHours} hours. You selected ${duration.toFixed(1)} hours.`
+    }
+    
+    // Express Play specific validation (6 AM - 6 PM only)
+    if (service.daycareType === "express-play") {
+      if (dropOffHour < 6 || pickUpHour > 18 || (pickUpHour === 18 && pickUpMin > 0)) {
+        return "Express Play is only available between 6 AM and 6 PM"
+      }
+    }
+    
+    return ""
+  }
+
+  // Fetch booked slots when date changes
+  useEffect(() => {
+    if (selectedDate && hasDaycareSelected()) {
+      const dateStr = selectedDate.toISOString().split("T")[0]
+      fetch(`/api/bookings/check-slots?date=${dateStr}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.bookedSlots) {
+            setBookedSlots(data.bookedSlots)
+          }
+        })
+        .catch(err => console.error("Error fetching slots:", err))
+    }
+  }, [selectedDate, selectedServices])
+
+  // Validate time whenever drop-off or pick-up changes
+  useEffect(() => {
+    const daycareService = getSelectedDaycareService()
+    if (daycareService && dropOffTime && pickUpTime) {
+      const error = validateTimeSelection(dropOffTime, pickUpTime, daycareService)
+      setTimeError(error)
+    } else {
+      setTimeError("")
+    }
+  }, [dropOffTime, pickUpTime, selectedServices])
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
@@ -298,7 +403,12 @@ export function ContactSection() {
       return
     }
     
-    if (!selectedDate || !selectedTime || selectedServices.length === 0) {
+    const isDaycare = hasDaycareSelected()
+    const hasValidTime = isDaycare 
+      ? (dropOffTime && pickUpTime && !timeError)
+      : selectedTime
+    
+    if (!selectedDate || !hasValidTime || selectedServices.length === 0) {
       alert("Please select a date and time for your appointment.")
       return
     }
@@ -318,6 +428,7 @@ export function ContactSection() {
       
       const serviceNames = selectedServices.map(s => s.name).join(", ")
       const addOnNames = selectedAddOns.map(a => a.name).join(", ")
+      const isDaycare = hasDaycareSelected()
       
       const { error } = await supabase.from("bookings").insert({
         customer_name: formData.customerName,
@@ -326,7 +437,13 @@ export function ContactSection() {
         phone: formData.phone,
         service: serviceNames + (addOnNames ? ` + Add-ons: ${addOnNames}` : ""),
         booking_date: selectedDate.toISOString().split("T")[0],
-        booking_time: selectedTime,
+        booking_time: isDaycare ? dropOffTime : selectedTime,
+        drop_off_time: isDaycare ? dropOffTime : null,
+        pick_up_time: isDaycare ? pickUpTime : null,
+        pet_size: isDaycare ? petSize : null,
+        service_type: getSelectedDaycareService()?.daycareType || null,
+        additional_dog: additionalDog,
+        total_price_cents: getTotalPrice(),
         notes: formData.notes,
         status: "pending",
         user_id: user?.id || null,
@@ -362,7 +479,20 @@ export function ContactSection() {
   }
 
   const getTotalPrice = () => {
-    const servicesPrice = selectedServices.reduce((sum, s) => sum + s.priceInCents, 0)
+    let servicesPrice = 0
+    
+    selectedServices.forEach(service => {
+      if (service.category === "pet-day-care" && service.daycareType) {
+        // Use dynamic daycare pricing
+        servicesPrice += getDaycarePrice(service, petSize)
+        if (additionalDog) {
+          servicesPrice += getAdditionalDogPrice(service, petSize)
+        }
+      } else {
+        servicesPrice += service.priceInCents
+      }
+    })
+    
     const addOnsPrice = selectedAddOns.reduce((sum, a) => sum + a.priceInCents, 0)
     return servicesPrice + addOnsPrice
   }
@@ -753,29 +883,151 @@ const getAllProductIds = () => {
                     <Calendar selectedDate={selectedDate} onSelectDate={setSelectedDate} />
                   </div>
                   
+                  {/* Daycare-specific options */}
+                  {hasDaycareSelected() && (
+                    <>
+                      {/* Pet Size Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Pet Size
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setPetSize("small")}
+                            className={`py-3 px-4 rounded-xl border transition-colors text-center ${
+                              petSize === "small"
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "border-border hover:bg-secondary"
+                            }`}
+                          >
+                            <p className="font-medium">Small</p>
+                            <p className="text-xs opacity-80">Under 30 lbs</p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPetSize("large")}
+                            className={`py-3 px-4 rounded-xl border transition-colors text-center ${
+                              petSize === "large"
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "border-border hover:bg-secondary"
+                            }`}
+                          >
+                            <p className="font-medium">Large</p>
+                            <p className="text-xs opacity-80">30+ lbs</p>
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {/* Additional Dog Option */}
+                      <div className="bg-secondary/30 rounded-xl p-4">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={additionalDog}
+                            onChange={(e) => setAdditionalDog(e.target.checked)}
+                            className="w-5 h-5 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                          />
+                          <div>
+                            <span className="text-sm text-foreground font-medium">
+                              Additional Dog
+                            </span>
+                            <p className="text-xs text-muted-foreground">
+                              Multiple dogs must share quarters for multi-dog pricing
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+                      
+                      {/* Booking Notes */}
+                      <div className="bg-primary/10 rounded-xl p-4 text-sm">
+                        <p className="font-medium text-foreground mb-2">Important Notes:</p>
+                        <ul className="text-muted-foreground space-y-1">
+                          <li>Drop-off before 9 AM</li>
+                          <li>Boarding pick-up by 10 AM</li>
+                          <li>Assessment Day is required before first daycare or overnight stay</li>
+                        </ul>
+                      </div>
+                    </>
+                  )}
+                  
                   {selectedDate && (
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Select Time
-                      </label>
-                      <div className="grid grid-cols-5 gap-2">
-                        {timeSlots.map((time) => (
-                          <button
-                            key={time}
-                            type="button"
-                            onClick={() => setSelectedTime(time)}
-                            className={`
-                              py-2 px-1 text-xs md:text-sm rounded-lg border transition-colors
-                              ${selectedTime === time 
-                                ? "bg-primary text-primary-foreground border-primary" 
-                                : "border-border hover:bg-secondary"
-                              }
-                            `}
-                          >
-                            {time}
-                          </button>
-                        ))}
-                      </div>
+                      {hasDaycareSelected() ? (
+                        <>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Select Drop-off & Pick-up Time
+                          </label>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Drop-off</p>
+                              <select
+                                value={dropOffTime}
+                                onChange={(e) => setDropOffTime(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground"
+                              >
+                                <option value="">Select time</option>
+                                {timeOptions.map((time) => (
+                                  <option key={`drop-${time}`} value={time}>
+                                    {time.includes(":00") ? time.replace(":00", ":00 AM/PM").replace(/(\d+)/, (m) => {
+                                      const h = parseInt(m)
+                                      return h > 12 ? `${h-12}` : h === 0 ? '12' : `${h}`
+                                    }) : time}
+                                    {parseInt(time.split(":")[0]) < 12 ? " AM" : " PM"}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Pick-up</p>
+                              <select
+                                value={pickUpTime}
+                                onChange={(e) => setPickUpTime(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground"
+                              >
+                                <option value="">Select time</option>
+                                {timeOptions.map((time) => (
+                                  <option key={`pick-${time}`} value={time}>
+                                    {parseInt(time.split(":")[0]) < 12 ? time + " AM" : (parseInt(time.split(":")[0]) === 12 ? time + " PM" : (parseInt(time.split(":")[0]) - 12) + time.slice(time.indexOf(":")) + " PM")}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                          {timeError && (
+                            <p className="text-sm text-destructive mt-2">{timeError}</p>
+                          )}
+                          {getSelectedDaycareService() && (
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {getSelectedDaycareService()?.name}: Maximum {getSelectedDaycareService()?.maxHours} hours
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Select Time
+                          </label>
+                          <div className="grid grid-cols-5 gap-2">
+                            {timeSlots.map((time) => (
+                              <button
+                                key={time}
+                                type="button"
+                                onClick={() => setSelectedTime(time)}
+                                className={`
+                                  py-2 px-1 text-xs md:text-sm rounded-lg border transition-colors
+                                  ${selectedTime === time 
+                                    ? "bg-primary text-primary-foreground border-primary" 
+                                    : "border-border hover:bg-secondary"
+                                  }
+                                `}
+                              >
+                                {time}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                   
@@ -909,7 +1161,13 @@ const getAllProductIds = () => {
                     type="submit" 
                     size="lg" 
                     className="w-full rounded-full text-lg"
-                    disabled={isSubmitting || !selectedDate || !selectedTime || !agreedToTerms || (hasTeethCleaningSelected() && !agreedToTeethCleaning)}
+                    disabled={
+                      isSubmitting || 
+                      !selectedDate || 
+                      !agreedToTerms || 
+                      (hasTeethCleaningSelected() && !agreedToTeethCleaning) ||
+                      (hasDaycareSelected() ? (!dropOffTime || !pickUpTime || !!timeError) : !selectedTime)
+                    }
                   >
                     {isSubmitting ? (
                       <>

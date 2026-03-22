@@ -29,6 +29,12 @@ type Booking = {
   service: string
   booking_date: string
   booking_time: string
+  drop_off_time: string | null
+  pick_up_time: string | null
+  pet_size: string | null
+  service_type: string | null
+  additional_dog: boolean | null
+  total_price_cents: number | null
   notes: string | null
   status: string
   created_at: string
@@ -282,8 +288,53 @@ export function AdminDashboard({ initialBookings }: { initialBookings: Booking[]
             />
           </div>
 
+          {/* Time Slots Overview */}
+          <div className="lg:col-span-1">
+            <div className="bg-card rounded-2xl border border-border p-6">
+              <h3 className="font-semibold text-lg mb-4">Time Slots for Selected Date</h3>
+              {filteredBookings.length === 0 ? (
+                <p className="text-muted-foreground text-sm">All slots available</p>
+              ) : (
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {filteredBookings
+                    .filter(b => b.status !== "cancelled")
+                    .sort((a, b) => {
+                      const timeA = a.drop_off_time || a.booking_time
+                      const timeB = b.drop_off_time || b.booking_time
+                      return timeA.localeCompare(timeB)
+                    })
+                    .map((booking) => (
+                      <div 
+                        key={booking.id}
+                        className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-red-800">
+                            {booking.drop_off_time && booking.pick_up_time 
+                              ? `${booking.drop_off_time} - ${booking.pick_up_time}`
+                              : booking.booking_time
+                            }
+                          </span>
+                          <span className="text-red-600 text-xs">Booked</span>
+                        </div>
+                        <p className="text-red-700 text-xs mt-1">
+                          {booking.pet_name} ({booking.service.split(",")[0]})
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              )}
+              <div className="mt-4 pt-4 border-t border-border">
+                <p className="text-xs text-muted-foreground">
+                  Slots marked as booked cannot be double-booked. 
+                  Time ranges for daycare services will block overlapping appointments.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Bookings List */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-1">
             <div className="bg-card rounded-2xl border border-border p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-semibold text-lg">
@@ -377,10 +428,19 @@ export function AdminDashboard({ initialBookings }: { initialBookings: Booking[]
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Dog className="w-4 h-4" />
                           <span>{booking.pet_name}</span>
+                          {booking.pet_size && (
+                            <span className="px-1.5 py-0.5 bg-secondary rounded text-xs capitalize">
+                              {booking.pet_size}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Clock className="w-4 h-4" />
-                          <span>{booking.booking_time}</span>
+                          {booking.drop_off_time && booking.pick_up_time ? (
+                            <span>{booking.drop_off_time} - {booking.pick_up_time}</span>
+                          ) : (
+                            <span>{booking.booking_time}</span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Phone className="w-4 h-4" />
@@ -391,6 +451,22 @@ export function AdminDashboard({ initialBookings }: { initialBookings: Booking[]
                           <span className="truncate">{booking.email}</span>
                         </div>
                       </div>
+                      
+                      {/* Additional booking details for daycare */}
+                      {(booking.additional_dog || booking.total_price_cents) && (
+                        <div className="flex items-center gap-4 mt-2 text-sm">
+                          {booking.additional_dog && (
+                            <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs">
+                              + Additional Dog
+                            </span>
+                          )}
+                          {booking.total_price_cents && (
+                            <span className="font-medium text-foreground">
+                              Total: ${(booking.total_price_cents / 100).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       {booking.notes && (
                         <div className="mt-3 pt-3 border-t border-border">

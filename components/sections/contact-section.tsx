@@ -200,6 +200,8 @@ export function ContactSection() {
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [showAgreementWarning, setShowAgreementWarning] = useState(false)
+  const [agreedToTeethCleaning, setAgreedToTeethCleaning] = useState(false)
+  const [showTeethCleaningWarning, setShowTeethCleaningWarning] = useState(false)
   
   useEffect(() => {
     const supabase = createClient()
@@ -291,6 +293,11 @@ export function ContactSection() {
       return
     }
     
+    if (hasTeethCleaningSelected() && !agreedToTeethCleaning) {
+      setShowTeethCleaningWarning(true)
+      return
+    }
+    
     if (!selectedDate || !selectedTime || selectedServices.length === 0) {
       alert("Please select a date and time for your appointment.")
       return
@@ -360,8 +367,14 @@ export function ContactSection() {
     return servicesPrice + addOnsPrice
   }
 
-  const getAllProductIds = () => {
-    return [...selectedServices.map(s => s.id), ...selectedAddOns.map(a => a.id)]
+const getAllProductIds = () => {
+    const ids = selectedServices.map(s => s.id)
+    return [...ids, ...selectedAddOns.map(a => a.id)]
+  }
+
+  const hasTeethCleaningSelected = () => {
+    return selectedServices.some(s => s.category === "teeth-cleaning") || 
+           selectedAddOns.some(a => a.category === "teeth-cleaning")
   }
 
   const mainServices = getMainServices()
@@ -809,9 +822,34 @@ export function ContactSection() {
                       <p className="font-medium text-foreground">
                         By checking below, you are agreeing that you certify and understand and agree with this policy, and forever release All 4 Paws Playcare Inc., and its operators and staff of all liability and responsibilities for potential accidents, injuries, and/or death.
                       </p>
-                      
-                      <div className="border-t border-border pt-4 mt-4">
-                        <p className="font-bold text-foreground text-center mb-3">LIABILITY WAIVER AND HOLD HARMLESS AGREEMENT</p>
+                    </div>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={agreedToTerms}
+                        onChange={(e) => {
+                          setAgreedToTerms(e.target.checked)
+                          if (e.target.checked) setShowAgreementWarning(false)
+                        }}
+                        className="w-5 h-5 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                      />
+                      <span className="text-sm text-foreground font-medium">
+                        I agree to the grooming terms and conditions
+                      </span>
+                    </label>
+                    {showAgreementWarning && (
+                      <p className="text-sm text-destructive mt-2 flex items-center gap-1">
+                        <span>Please agree to the terms and conditions to proceed.</span>
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Natural Cosmetic Teeth Cleaning Agreement - Only shows when teeth cleaning is selected */}
+                  {hasTeethCleaningSelected() && (
+                    <div className="bg-secondary/50 rounded-xl p-4 border border-border">
+                      <h4 className="font-semibold text-foreground mb-3">All Natural Cosmetic Teeth Cleaning - Liability Waiver</h4>
+                      <div className="max-h-[200px] overflow-y-auto text-sm text-muted-foreground space-y-4 mb-4 pr-2">
+                        <p className="font-bold text-foreground text-center">LIABILITY WAIVER AND HOLD HARMLESS AGREEMENT</p>
                         
                         <p>
                           BY SIGNING THIS AGREEMENT, THE ANIMAL(S) OWNER AGREES TO INDEMNIFY AND HOLD ALL 4 PAWS PLAYCARE INC., AND ALL EMPLOYEES AND AGENTS OF ALL 4 PAWS PLAYCARE INC. HARMLESS FROM AND AGAINST ALL CLAIMS, DEMANDS OR CAUSES OF ACTION. LIABILITY, LOSS, DAMAGES, OR EXPENSES, INCLUDING ATTORNEYS FEES AND COSTS, ARISING OUT OF OR IN THE COURSE OF ANY ANIMAL TEETH CLEANING ACTIVITIES.
@@ -841,37 +879,37 @@ export function ContactSection() {
                           AS A PRECAUTIONARY, WE RECOMMEND ALL OF OUR CLIENTS TO CONSULT WITH THEIR VETERINARIAN, PRIOR TO AND/OR THEREAFTER THEIR COSMETIC TEETH CLEANING.
                         </p>
                         
-                        <p className="font-medium">
+                        <p className="font-medium text-foreground">
                           NOTE: WE ARE NOT VETERINARIANS, AND THIS PROCEDURE SHOULD NOT BE CONSIDERED A VETERINARY CLEANING BUT A COSMETIC CLEANING ONLY.
                         </p>
                       </div>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={agreedToTeethCleaning}
+                          onChange={(e) => {
+                            setAgreedToTeethCleaning(e.target.checked)
+                            if (e.target.checked) setShowTeethCleaningWarning(false)
+                          }}
+                          className="w-5 h-5 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                        />
+                        <span className="text-sm text-foreground font-medium">
+                          I agree to the teeth cleaning liability waiver
+                        </span>
+                      </label>
+                      {showTeethCleaningWarning && (
+                        <p className="text-sm text-destructive mt-2 flex items-center gap-1">
+                          <span>Please agree to the teeth cleaning liability waiver to proceed.</span>
+                        </p>
+                      )}
                     </div>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={agreedToTerms}
-                        onChange={(e) => {
-                          setAgreedToTerms(e.target.checked)
-                          if (e.target.checked) setShowAgreementWarning(false)
-                        }}
-                        className="w-5 h-5 rounded border-border text-primary focus:ring-primary cursor-pointer"
-                      />
-                      <span className="text-sm text-foreground font-medium">
-                        I agree to the grooming terms and conditions
-                      </span>
-                    </label>
-                    {showAgreementWarning && (
-                      <p className="text-sm text-destructive mt-2 flex items-center gap-1">
-                        <span>Please agree to the terms and conditions to proceed.</span>
-                      </p>
-                    )}
-                  </div>
+                  )}
                   
                   <Button 
                     type="submit" 
                     size="lg" 
                     className="w-full rounded-full text-lg"
-                    disabled={isSubmitting || !selectedDate || !selectedTime || !agreedToTerms}
+                    disabled={isSubmitting || !selectedDate || !selectedTime || !agreedToTerms || (hasTeethCleaningSelected() && !agreedToTeethCleaning)}
                   >
                     {isSubmitting ? (
                       <>

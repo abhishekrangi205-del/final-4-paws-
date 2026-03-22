@@ -1,12 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/client"
-import type { User } from "@supabase/supabase-js"
-import { LogOut, User as UserIcon, Dog } from "lucide-react"
 
 const navLinks = [
   { href: "#services", label: "Services" },
@@ -16,35 +11,6 @@ const navLinks = [
 ]
 
 export function DesktopNav() {
-  const [user, setUser] = useState<User | null>(null)
-  const router = useRouter()
-  
-  useEffect(() => {
-    const supabase = createClient()
-    
-    // Handle case where Supabase is not configured
-    if (!supabase) {
-      return
-    }
-    
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
-    })
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
-    
-    return () => subscription.unsubscribe()
-  }, [])
-  
-  const handleSignOut = async () => {
-    const supabase = createClient()
-    if (!supabase) return
-    await supabase.auth.signOut()
-    router.refresh()
-  }
-  
   return (
     <header className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
       <div className="w-full max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -70,38 +36,6 @@ export function DesktopNav() {
         </nav>
 
         <div className="flex items-center gap-4">
-          {user ? (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                asChild
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <Link href="/account">
-                  <Dog className="w-4 h-4 mr-2" />
-                  My Pets
-                </Link>
-              </Button>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <UserIcon className="w-4 h-4" />
-                <span className="max-w-[120px] truncate">{user.email}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSignOut}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" className="rounded-full px-6" asChild>
-              <Link href="/auth/login">Sign In</Link>
-            </Button>
-          )}
           <Button size="lg" className="rounded-full px-6" asChild>
             <Link href="#book">Book Now</Link>
           </Button>

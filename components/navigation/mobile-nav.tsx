@@ -1,10 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Home, Scissors, Images, Info, MapPin, LogIn, Dog } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
-import type { User as SupabaseUser } from "@supabase/supabase-js"
+import { Home, Scissors, Images, Info, MapPin } from "lucide-react"
 
 const navItems = [
   { href: "#hero", label: "Home", icon: Home },
@@ -32,27 +29,6 @@ function PawIcon({ className }: { className?: string }) {
 }
 
 export function MobileNav() {
-  const [user, setUser] = useState<SupabaseUser | null>(null)
-  
-  useEffect(() => {
-    const supabase = createClient()
-    
-    // Handle case where Supabase is not configured
-    if (!supabase) {
-      return
-    }
-    
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
-    })
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
-    
-    return () => subscription.unsubscribe()
-  }, [])
-  
   const handleNavClick = (e: React.MouseEvent<HTMLButtonElement>, href: string) => {
     e.preventDefault()
     const targetId = href.replace("#", "")
@@ -75,21 +51,6 @@ export function MobileNav() {
               All 4 Paws Playcare
             </span>
           </Link>
-          {user ? (
-            <Link
-              href="/account"
-              className="text-primary hover:text-primary/80 transition-colors"
-            >
-              <Dog className="w-6 h-6" />
-            </Link>
-          ) : (
-            <Link
-              href="/auth/login"
-              className="text-muted-foreground hover:text-primary transition-colors"
-            >
-              <LogIn className="w-6 h-6" />
-            </Link>
-          )}
         </div>
       </header>
       

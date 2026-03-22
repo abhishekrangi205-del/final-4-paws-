@@ -198,6 +198,8 @@ export function ContactSection() {
   const [selectedTime, setSelectedTime] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [showAgreementWarning, setShowAgreementWarning] = useState(false)
   
   useEffect(() => {
     const supabase = createClient()
@@ -283,6 +285,11 @@ export function ContactSection() {
 
   const handleProceedToCheckout = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!agreedToTerms) {
+      setShowAgreementWarning(true)
+      return
+    }
     
     if (!selectedDate || !selectedTime || selectedServices.length === 0) {
       alert("Please select a date and time for your appointment.")
@@ -767,11 +774,58 @@ export function ContactSection() {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground resize-none"
                   />
+                  
+                  {/* Grooming Agreement */}
+                  <div className="bg-secondary/50 rounded-xl p-4 border border-border">
+                    <h4 className="font-semibold text-foreground mb-3">Grooming Agreement</h4>
+                    <ul className="text-sm text-muted-foreground space-y-2 mb-4">
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>Pet is healthy and fit for grooming.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>Groomer is not responsible for pre-existing conditions.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>Matted pets may incur additional charges.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>Grooming may cause minor stress or irritation.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>In emergencies, groomer may seek veterinary care at owner's expense.</span>
+                      </li>
+                    </ul>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={agreedToTerms}
+                        onChange={(e) => {
+                          setAgreedToTerms(e.target.checked)
+                          if (e.target.checked) setShowAgreementWarning(false)
+                        }}
+                        className="w-5 h-5 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                      />
+                      <span className="text-sm text-foreground font-medium">
+                        I agree to the grooming terms and conditions
+                      </span>
+                    </label>
+                    {showAgreementWarning && (
+                      <p className="text-sm text-destructive mt-2 flex items-center gap-1">
+                        <span>Please agree to the terms and conditions to proceed.</span>
+                      </p>
+                    )}
+                  </div>
+                  
                   <Button 
                     type="submit" 
                     size="lg" 
                     className="w-full rounded-full text-lg"
-                    disabled={isSubmitting || !selectedDate || !selectedTime}
+                    disabled={isSubmitting || !selectedDate || !selectedTime || !agreedToTerms}
                   >
                     {isSubmitting ? (
                       <>

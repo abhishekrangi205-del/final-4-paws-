@@ -8,8 +8,15 @@ CREATE TABLE IF NOT EXISTS public.bookings (
   service TEXT NOT NULL,
   booking_date DATE NOT NULL,
   booking_time TEXT NOT NULL,
+  drop_off_time TEXT,
+  pick_up_time TEXT,
+  pet_size TEXT,
+  service_type TEXT,
+  additional_dog BOOLEAN DEFAULT false,
+  total_price_cents INTEGER,
   notes TEXT,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled')),
+  user_id UUID REFERENCES auth.users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -31,3 +38,7 @@ CREATE POLICY "Authenticated users can update bookings" ON public.bookings
 -- Create policy to allow authenticated users (admin) to delete bookings
 CREATE POLICY "Authenticated users can delete bookings" ON public.bookings
   FOR DELETE USING (auth.role() = 'authenticated');
+
+-- Allow users to view their own bookings
+CREATE POLICY "Users can view own bookings" ON public.bookings
+  FOR SELECT USING (auth.uid() = user_id);

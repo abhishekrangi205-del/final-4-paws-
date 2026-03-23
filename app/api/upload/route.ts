@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       access: "private",
     })
 
-    // Return pathname for private blob access
+    // Return pathname for private blob access (use /api/file?pathname=... to serve)
     return NextResponse.json({ 
       pathname: blob.pathname,
       contentType: file.type,

@@ -1,6 +1,3 @@
-// pages/api/upload.ts  (for Pages Router)
-// OR app/api/upload/route.ts  (for App Router)
-
 import { put } from '@vercel/blob'
 import { NextResponse } from 'next/server'
 
@@ -40,14 +37,13 @@ export async function POST(request: Request) {
     // Upload to Vercel Blob using token
     const buffer = await file.arrayBuffer()
     const blob = await put(fileName, buffer, {
-      access: 'private', // change to 'public' if you want public access
+      access: 'private', // change to 'public' if needed
       contentType: file.type,
-      token: process.env.BLOB_READ_WRITE_TOKEN, // MUST be set in Vercel
+      token: process.env.BLOB_READ_WRITE_TOKEN,
     })
 
-    // Return the uploaded file info
+    // Return uploaded file info
     return NextResponse.json({
-      url: blob.url,
       pathname: blob.pathname,
     })
   } catch (err) {

@@ -226,7 +226,8 @@ export function AdminDashboard({ initialBookings, initialPets = [], initError = 
         const data = await response.json()
         setBookings(data)
       } else {
-        setError("Failed to refresh bookings")
+        const errorData = await response.json()
+        setError(errorData.error || "Failed to refresh bookings")
       }
     } catch (err) {
       console.error("Error refreshing bookings:", err)
@@ -245,7 +246,8 @@ export function AdminDashboard({ initialBookings, initialPets = [], initError = 
         const data = await response.json()
         setPets(data)
       } else {
-        setError("Failed to fetch pets")
+        const errorData = await response.json()
+        setError(errorData.error || "Failed to fetch pets")
       }
     } catch (err) {
       console.error("Error fetching pets:", err)

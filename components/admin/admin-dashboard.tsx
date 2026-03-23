@@ -198,9 +198,10 @@ type AdminTab = "bookings" | "pets"
 type AdminDashboardProps = {
   initialBookings: Booking[]
   initialPets?: Pet[]
+  initError?: string | null
 }
 
-export function AdminDashboard({ initialBookings, initialPets = [] }: AdminDashboardProps) {
+export function AdminDashboard({ initialBookings, initialPets = [], initError = null }: AdminDashboardProps) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [filter, setFilter] = useState<string>("all")
@@ -208,7 +209,7 @@ export function AdminDashboard({ initialBookings, initialPets = [] }: AdminDashb
   const [activeTab, setActiveTab] = useState<AdminTab>("bookings")
   const [pets, setPets] = useState<Pet[]>(initialPets)
   const [petsLoading, setPetsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(initError)
   const router = useRouter()
 
   const handleLogout = async () => {

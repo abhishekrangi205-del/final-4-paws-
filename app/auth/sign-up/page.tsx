@@ -13,8 +13,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { PawPrint } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { PawPrint, Loader2 } from 'lucide-react'
 
 export default function SignUpPage() {
   const [name, setName] = useState('')
@@ -23,7 +23,26 @@ export default function SignUpPage() {
   const [repeatPassword, setRepeatPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const router = useRouter()
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) {
+      setIsCheckingAuth(false)
+      return
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[v0] Signup page - Current session:', !!session)
+      if (session) {
+        router.push('/')
+      } else {
+        setIsCheckingAuth(false)
+      }
+    })
+  }, [router])
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,6 +51,7 @@ export default function SignUpPage() {
     setError(null)
 
     if (!supabase) {
+      console.error('[v0] Supabase client not initialized')
       setError('Unable to connect to authentication service. Please refresh the page and try again.')
       setIsLoading(false)
       return
@@ -50,25 +70,51 @@ export default function SignUpPage() {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      console.log('[v0] Attempting signup for:', email)
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo:
             process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-            `${window.location.origin}/`,
+            `${window.location.origin}/auth/callback`,
           data: {
             full_name: name,
           },
         },
       })
-      if (error) throw error
+      
+      if (error) {
+        console.error('[v0] Signup error:', error.message)
+        throw error
+      }
+      
+      console.log('[v0] Signup successful:', !!data.user)
       router.push('/auth/sign-up-success')
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+      // Provide user-friendly error messages
+      if (errorMessage.includes('already registered')) {
+        setError('An account with this email already exists. Please sign in instead.')
+      } else if (errorMessage.includes('network')) {
+        setError('Network error. Please check your internet connection and try again.')
+      } else if (errorMessage.includes('valid email')) {
+        setError('Please enter a valid email address.')
+      } else {
+        setError(errorMessage)
+      }
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Show loading spinner while checking auth
+  if (isCheckingAuth) {
+    return (
+      <div className="flex min-h-svh w-full items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (

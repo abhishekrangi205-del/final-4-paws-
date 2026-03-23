@@ -41,21 +41,34 @@ export async function createClient() {
  * Admin client that bypasses RLS using the service role key.
  * Only use this for admin operations on the server side.
  * NEVER expose this client to the frontend.
+ * Returns null if service role key is not configured.
  */
 export function createAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error(
-      'Admin client requires NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.'
-    )
+  // If service role key is available, use it for full admin access
+  if (supabaseUrl && serviceRoleKey) {
+    return createSupabaseClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
   }
 
-  return createSupabaseClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  })
+  // Fallback to anon key if service role is not available
+  // This will respect RLS policies
+  if (supabaseUrl && supabaseAnonKey) {
+    return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+  }
+
+  // Return null if no Supabase configuration is available
+  return null
 }

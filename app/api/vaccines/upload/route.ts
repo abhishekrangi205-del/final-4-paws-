@@ -31,6 +31,10 @@ export async function POST(request: Request) {
     const fileName = `vaccines/${Date.now()}-${sanitizedFileName}`
 
     const buffer = await file.arrayBuffer()
+
+    // ✅ TEMPORARY: log token to verify it’s available on the server
+    console.log('BLOB_READ_WRITE_TOKEN:', process.env.BLOB_READ_WRITE_TOKEN)
+
     const blob = await put(fileName, buffer, {
       access: 'private',
       contentType: file.type,

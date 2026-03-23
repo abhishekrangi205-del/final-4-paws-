@@ -26,70 +26,73 @@ export default function LoginPage() {
 
   // Check if user is already logged in
   useEffect(() => {
-    const supabase = createClient()
-    if (!supabase) {
-      setIsCheckingAuth(false)
-      return
+    let isMounted = true
+    
+    const checkAuth = async () => {
+      try {
+        const supabase = createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!isMounted) return
+        
+        if (session) {
+          router.push('/')
+        } else {
+          setIsCheckingAuth(false)
+        }
+
+        // Listen for auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'SIGNED_IN' && session) {
+            router.push('/')
+            router.refresh()
+          }
+        })
+
+        return () => subscription.unsubscribe()
+      } catch (err) {
+        console.error('Auth check failed:', err)
+        if (isMounted) {
+          setIsCheckingAuth(false)
+          setError('Unable to connect to authentication service. Please try again.')
+        }
+      }
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('[v0] Login page - Current session:', !!session)
-      if (session) {
-        router.push('/')
-      } else {
-        setIsCheckingAuth(false)
-      }
-    })
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[v0] Auth state changed:', event, !!session)
-      if (event === 'SIGNED_IN' && session) {
-        router.push('/')
-        router.refresh()
-      }
-    })
-
-    return () => subscription.unsubscribe()
+    checkAuth()
+    
+    return () => {
+      isMounted = false
+    }
   }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
-    if (!supabase) {
-      console.error('[v0] Supabase client not initialized')
-      setError('Unable to connect to authentication service. Please refresh the page and try again.')
-      setIsLoading(false)
-      return
-    }
-
     try {
-      console.log('[v0] Attempting login for:', email)
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
       
-      if (error) {
-        console.error('[v0] Login error:', error.message)
-        throw error
-      }
+      if (error) throw error
       
-      console.log('[v0] Login successful:', !!data.session)
       router.push('/')
       router.refresh()
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred'
       // Provide user-friendly error messages
       if (errorMessage.includes('Invalid login credentials')) {
         setError('Invalid email or password. Please check your credentials and try again.')
       } else if (errorMessage.includes('Email not confirmed')) {
         setError('Please confirm your email address before signing in. Check your inbox for a confirmation link.')
-      } else if (errorMessage.includes('network')) {
+      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
         setError('Network error. Please check your internet connection and try again.')
+      } else if (errorMessage.includes('environment variables')) {
+        setError('Authentication service is not configured. Please contact support.')
       } else {
         setError(errorMessage)
       }
@@ -150,9 +153,20 @@ export default function LoginPage() {
                       className="bg-card"
                     />
                   </div>
-                  {error && <p className="text-sm text-destructive">{error}</p>}
+                  {error && (
+                    <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                      {error}
+                    </div>
+                  )}
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'Signing in...' : 'Sign In'}
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      'Sign In'
+                    )}
                   </Button>
                 </div>
                 <div className="mt-6 text-center text-sm">

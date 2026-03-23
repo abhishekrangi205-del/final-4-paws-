@@ -787,15 +787,15 @@ function InlineVaccinationForm({
     if (!file) return
     
     // Validate file type
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']
     if (!allowedTypes.includes(file.type)) {
-      alert('Please upload a PDF or image file (JPEG, PNG)')
+      alert('Please upload a PDF or image file')
       return
     }
     
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5MB')
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB')
       return
     }
     
@@ -803,9 +803,8 @@ function InlineVaccinationForm({
     try {
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('folder', 'vaccinations')
       
-      const res = await fetch('/api/upload', {
+      const res = await fetch('/api/vaccines/upload', {
         method: 'POST',
         body: formData,
       })
@@ -817,6 +816,7 @@ function InlineVaccinationForm({
         alert('Failed to upload document')
       }
     } catch (err) {
+      console.error('Upload error:', err)
       alert('Failed to upload document')
     } finally {
       setDocumentUploading(false)

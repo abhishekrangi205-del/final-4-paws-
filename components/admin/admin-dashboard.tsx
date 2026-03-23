@@ -18,6 +18,7 @@ import {
   FileText,
   Loader2,
   AlertCircle,
+  Shield,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,7 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-type AdminTab = "bookings" | "pets"
+type AdminTab = "bookings" | "pets" | "vaccinations"
 
 type Booking = {
   id: string
@@ -48,6 +49,18 @@ type Pet = {
   size?: string
 }
 
+type Vaccination = {
+  id: string
+  pet_id?: string
+  vaccine_name?: string
+  date_administered?: string
+  expiration_date?: string
+  verified?: boolean
+  verified_by?: string
+  verified_at?: string
+  document_pathname?: string
+}
+
 interface AdminDashboardProps {
   initialBookings?: Booking[]
   initialPets?: Pet[]
@@ -63,6 +76,7 @@ export function AdminDashboard({
   const [activeTab, setActiveTab] = useState<AdminTab>("bookings")
   const [bookings, setBookings] = useState<Booking[]>(initialBookings)
   const [pets, setPets] = useState<Pet[]>(initialPets)
+  const [vaccinations, setVaccinations] = useState<Vaccination[]>([])
   const [error, setError] = useState<string | null>(initError)
   const [isLoading, setIsLoading] = useState(false)
   const [selectedDate, setSelectedDate] = useState(new Date())
@@ -142,6 +156,48 @@ export function AdminDashboard({
     }
   }
 
+  const refreshVaccinations = async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await fetch("/api/admin/vaccinations")
+      if (response.ok) {
+        const data = await response.json()
+        setVaccinations(Array.isArray(data) ? data : [])
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        setError(errorData.error || "Failed to fetch vaccinations")
+      }
+    } catch (err) {
+      console.error("[v0] Error refreshing vaccinations:", err)
+      setError("Failed to fetch vaccinations. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const updateVaccinationStatus = async (vaccinationId: string, verified: boolean) => {
+    try {
+      const response = await fetch("/api/admin/vaccinations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vaccinationId, verified }),
+      })
+
+      if (response.ok) {
+        setVaccinations((prev) =>
+          prev.map((v) => (v.id === vaccinationId ? { ...v, verified } : v))
+        )
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        setError(errorData.error || "Failed to update vaccination")
+      }
+    } catch (err) {
+      console.error("[v0] Error updating vaccination:", err)
+      setError("Failed to update vaccination")
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -176,9 +232,10 @@ export function AdminDashboard({
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AdminTab)} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-md grid-cols-3">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="pets">Pets</TabsTrigger>
+            <TabsTrigger value="vaccinations">Vaccinations</TabsTrigger>
           </TabsList>
 
           {/* Bookings Tab */}
@@ -339,6 +396,99 @@ export function AdminDashboard({
                       <p className="text-sm text-muted-foreground">
                         <span className="font-medium">Size:</span> {pet.size || "N/A"}
                       </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Vaccinations Tab */}
+          <TabsContent value="vaccinations" className="space-y-6 mt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-foreground">Vaccination Records</h2>
+                <p className="text-sm text-muted-foreground">
+                  Total: {vaccinations.length}
+                </p>
+              </div>
+              <Button
+                onClick={refreshVaccinations}
+                disabled={isLoading}
+                className="gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline">Refresh</span>
+              </Button>
+            </div>
+
+            {vaccinations.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                  <p className="text-muted-foreground">No vaccination records found</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {vaccinations.map((vax) => (
+                  <Card key={vax.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-5 h-5 text-primary" />
+                          <CardTitle className="text-lg">{vax.vaccine_name || "Unknown"}</CardTitle>
+                        </div>
+                        <Badge variant={vax.verified ? "default" : "secondary"}>
+                          {vax.verified ? (
+                            <Check className="w-3 h-3 mr-1" />
+                          ) : null}
+                          {vax.verified ? "Verified" : "Pending"}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium">Date:</span> {vax.date_administered ? new Date(vax.date_administered).toLocaleDateString() : "N/A"}
+                      </p>
+                      {vax.expiration_date && (
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium">Expires:</span> {new Date(vax.expiration_date).toLocaleDateString()}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 pt-2">
+                        <Button
+                          size="sm"
+                          variant={vax.verified ? "destructive" : "default"}
+                          onClick={() => updateVaccinationStatus(vax.id, !vax.verified)}
+                          className="gap-2"
+                        >
+                          {vax.verified ? (
+                            <>
+                              <X className="w-3 h-3" />
+                              Unverify
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-3 h-3" />
+                              Verify
+                            </>
+                          )}
+                        </Button>
+                        {vax.document_pathname && (
+                          <a
+                            href={`/api/file?pathname=${encodeURIComponent(vax.document_pathname)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-auto"
+                          >
+                            <Button size="sm" variant="outline" className="gap-2">
+                              <FileText className="w-3 h-3" />
+                              Document
+                            </Button>
+                          </a>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 ))}

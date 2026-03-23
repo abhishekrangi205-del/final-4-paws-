@@ -25,6 +25,12 @@ export default function AccountPage() {
       try {
         const supabase = createClient()
         
+        if (!supabase) {
+          setAuthError('Authentication service is not configured. Please contact support.')
+          setIsLoading(false)
+          return
+        }
+        
         // Get initial session
         const { data: { session }, error } = await supabase.auth.getSession()
         
@@ -79,6 +85,7 @@ export default function AccountPage() {
   const handleSignOut = async () => {
     try {
       const supabase = createClient()
+      if (!supabase) return
       await supabase.auth.signOut()
       router.push("/")
       router.refresh()

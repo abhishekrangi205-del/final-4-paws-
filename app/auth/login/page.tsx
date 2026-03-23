@@ -31,6 +31,10 @@ export default function LoginPage() {
     const checkAuth = async () => {
       try {
         const supabase = createClient()
+        if (!supabase) {
+          setIsCheckingAuth(false)
+          return
+        }
         const { data: { session } } = await supabase.auth.getSession()
         
         if (!isMounted) return
@@ -73,6 +77,11 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient()
+      if (!supabase) {
+        setError('Authentication service is not configured. Please contact support.')
+        setIsLoading(false)
+        return
+      }
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,

@@ -275,6 +275,13 @@ function BookingsTab({ userId }: { userId: string }) {
     const fetchBookings = async () => {
       try {
         const supabase = createClient()
+        
+        if (!supabase) {
+          setError("Database connection not available. Please check your configuration.")
+          setIsLoading(false)
+          return
+        }
+        
         const { data, error: fetchError } = await supabase
           .from("bookings")
           .select("*")
@@ -285,7 +292,7 @@ function BookingsTab({ userId }: { userId: string }) {
         setBookings(data || [])
       } catch (err) {
         console.error('Error fetching bookings:', err)
-        setError('Failed to load bookings')
+        setError('Failed to load bookings. The database may not be configured.')
       } finally {
         setIsLoading(false)
       }

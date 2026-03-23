@@ -195,14 +195,20 @@ function CalendarView({
 
 type AdminTab = "bookings" | "pets"
 
-export function AdminDashboard({ initialBookings }: { initialBookings: Booking[] }) {
+type AdminDashboardProps = {
+  initialBookings: Booking[]
+  initialPets?: Pet[]
+}
+
+export function AdminDashboard({ initialBookings, initialPets = [] }: AdminDashboardProps) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [filter, setFilter] = useState<string>("all")
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [activeTab, setActiveTab] = useState<AdminTab>("bookings")
-  const [pets, setPets] = useState<Pet[]>([])
+  const [pets, setPets] = useState<Pet[]>(initialPets)
   const [petsLoading, setPetsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -212,14 +218,18 @@ export function AdminDashboard({ initialBookings }: { initialBookings: Booking[]
 
   const refreshBookings = async () => {
     setIsRefreshing(true)
+    setError(null)
     try {
       const response = await fetch("/api/admin/bookings")
       if (response.ok) {
         const data = await response.json()
         setBookings(data)
+      } else {
+        setError("Failed to refresh bookings")
       }
-    } catch (error) {
-      console.error("Error refreshing bookings:", error)
+    } catch (err) {
+      console.error("Error refreshing bookings:", err)
+      setError("Failed to refresh bookings")
     } finally {
       setIsRefreshing(false)
     }
@@ -227,14 +237,18 @@ export function AdminDashboard({ initialBookings }: { initialBookings: Booking[]
 
   const fetchPets = async () => {
     setPetsLoading(true)
+    setError(null)
     try {
       const response = await fetch("/api/admin/pets")
       if (response.ok) {
         const data = await response.json()
         setPets(data)
+      } else {
+        setError("Failed to fetch pets")
       }
-    } catch (error) {
-      console.error("Error fetching pets:", error)
+    } catch (err) {
+      console.error("Error fetching pets:", err)
+      setError("Failed to fetch pets")
     } finally {
       setPetsLoading(false)
     }
@@ -348,6 +362,18 @@ export function AdminDashboard({ initialBookings }: { initialBookings: Booking[]
       </header>
 
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">
+        {/* Error Alert */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-100 border border-red-200 text-red-800 rounded-xl flex items-center justify-between">
+            <span>{error}</span>
+            <button 
+              onClick={() => setError(null)} 
+              className="text-red-600 hover:text-red-800"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
         {activeTab === "bookings" && (
           <>
         {/* Stats */}
@@ -588,7 +614,10 @@ export function AdminDashboard({ initialBookings }: { initialBookings: Booking[]
             </div>
 
             {petsLoading ? (
-              <div className="text-center py-12 text-muted-foreground">Loading pets...</div>
+              <div className="text-center py-12 text-muted-foreground">
+                <RefreshCw className="w-8 h-8 mx-auto mb-4 animate-spin opacity-50" />
+                <p>Loading pets...</p>
+              </div>
             ) : pets.length === 0 ? (
               <div className="text-center py-12 border-2 border-dashed border-border rounded-xl">
                 <Dog className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />

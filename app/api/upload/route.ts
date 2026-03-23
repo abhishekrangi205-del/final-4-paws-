@@ -35,13 +35,14 @@ export async function POST(request: NextRequest) {
     const folder = petId ? `pets/${user.id}/${petId}/${type}` : `pets/${user.id}/${type}`
     const filename = `${folder}/${Date.now()}-${file.name}`
 
-    // Upload to Vercel Blob (private store)
+    // Upload to Vercel Blob (public store)
     const blob = await put(filename, file, {
-      access: "private",
+      access: "public",
     })
 
-    // Return pathname for private blob access
+    // Return URL for public blob access
     return NextResponse.json({ 
+      url: blob.url,
       pathname: blob.pathname,
       contentType: file.type,
     })

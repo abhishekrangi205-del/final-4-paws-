@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const fileName = `vaccines/${Date.now()}-${file.name}`
     
     const blob = await put(fileName, buffer, {
-      access: 'private',
+      access: 'public',
       contentType: file.type,
     })
     

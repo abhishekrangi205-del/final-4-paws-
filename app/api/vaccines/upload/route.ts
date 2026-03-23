@@ -32,11 +32,8 @@ export async function POST(request: Request) {
 
     const buffer = await file.arrayBuffer()
 
-    // ✅ TEMPORARY: log token to verify it’s available on the server
-    console.log('BLOB_READ_WRITE_TOKEN:', process.env.BLOB_READ_WRITE_TOKEN)
-
     const blob = await put(fileName, buffer, {
-      access: 'private',
+      access: 'public',
       contentType: file.type,
       token: process.env.BLOB_READ_WRITE_TOKEN,
     })

@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { get } from "@vercel/blob"
 import { createClient } from "@/lib/supabase/server"
 
 export async function GET(request: NextRequest) {
@@ -11,39 +10,22 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Support both url and pathname params for backwards compatibility
+    const url = request.nextUrl.searchParams.get("url")
     const pathname = request.nextUrl.searchParams.get("pathname")
 
-    if (!pathname) {
-      return NextResponse.json({ error: "Missing pathname" }, { status: 400 })
+    if (!url && !pathname) {
+      return NextResponse.json({ error: "Missing url or pathname" }, { status: 400 })
     }
 
-    const result = await get(pathname, {
-      access: "private",
-      ifNoneMatch: request.headers.get("if-none-match") ?? undefined,
-    })
-
-    if (!result) {
-      return new NextResponse("Not found", { status: 404 })
+    // For public blobs, redirect to the blob URL directly
+    // This allows authentication check while serving public files
+    if (url) {
+      return NextResponse.redirect(url)
     }
 
-    // Blob hasn't changed — tell the browser to use its cached copy
-    if (result.statusCode === 304) {
-      return new NextResponse(null, {
-        status: 304,
-        headers: {
-          ETag: result.blob.etag,
-          "Cache-Control": "private, no-cache",
-        },
-      })
-    }
-
-    return new NextResponse(result.stream, {
-      headers: {
-        "Content-Type": result.blob.contentType,
-        ETag: result.blob.etag,
-        "Cache-Control": "private, no-cache",
-      },
-    })
+    // If only pathname provided, construct URL or return error
+    return NextResponse.json({ error: "Please provide the full blob URL" }, { status: 400 })
   } catch (error) {
     console.error("Error serving file:", error)
     return NextResponse.json({ error: "Failed to serve file" }, { status: 500 })

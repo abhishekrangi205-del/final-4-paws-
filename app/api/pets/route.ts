@@ -22,8 +22,8 @@ export async function GET() {
     
     if (error) {
       console.error("Error fetching pets:", error)
-      // Return empty array if table doesn't exist
-      if (error.code === "PGRST205" || error.message.includes("does not exist") || error.message.includes("not found")) {
+      // Return empty array if table doesn't exist or has schema issues
+      if (error.code === "PGRST205" || error.code === "42703" || error.message.includes("does not exist") || error.message.includes("not found")) {
         return NextResponse.json([])
       }
       return NextResponse.json({ error: error.message }, { status: 500 })
@@ -51,27 +51,26 @@ export async function POST(request: Request) {
     
     const body = await request.json()
     
-    // Remove age_months from the insert as it may not exist in schema
-    const { age_months, ...petData } = body
+    // Handle both age_months (old) and age_years (new) for compatibility
+    const { age_months, age_years, ...petData } = body
+    const finalAgeYears = age_years || (age_months ? Math.floor(age_months / 12) : null)
     
     const { data: pet, error } = await supabase
       .from("pets")
       .insert({
         ...petData,
         user_id: user.id,
-        age_years: age_months ? Math.floor(age_months / 12) : null,
+        age_years: finalAgeYears,
+        age_months: age_months || null,
       })
       .select()
       .single()
     
     if (error) {
       console.error("Error creating pet:", error)
-      // Return friendly error for missing column
-      if (error.message.includes("age_months")) {
-        return NextResponse.json({ error: "Database schema mismatch. Please contact support." }, { status: 500 })
-      }
-      if (error.code === "PGRST205" || error.message.includes("does not exist")) {
-        return NextResponse.json({ error: "The pets table has not been created yet." }, { status: 500 })
+      // Handle schema mismatch gracefully
+      if (error.code === "42703" || error.message.includes("does not exist")) {
+        return NextResponse.json({ error: "Database table not configured properly. Please contact support." }, { status: 500 })
       }
       return NextResponse.json({ error: error.message }, { status: 500 })
     }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { PawPrint, LogOut, ArrowLeft, Mail, User, Dog, Calendar, ChevronRight } from "lucide-react"
+import { PawPrint, LogOut, ArrowLeft, Mail, User, Dog, Calendar, ChevronRight, Loader2 } from "lucide-react"
 import { PetProfileManager } from "@/components/pet-profile"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -14,6 +14,7 @@ type Tab = "profile" | "pets" | "bookings"
 export default function AccountPage() {
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [authError, setAuthError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>("profile")
   const router = useRouter()
   
@@ -21,18 +22,43 @@ export default function AccountPage() {
     const supabase = createClient()
     
     if (!supabase) {
+      console.error('[v0] Supabase client not available')
+      setAuthError('Unable to connect to authentication service')
       setIsLoading(false)
-      router.push("/auth/login")
       return
     }
     
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
-      setIsLoading(false)
-      if (!user) {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      console.log('[v0] Account page - Session check:', !!session)
+      if (error) {
+        console.error('[v0] Session error:', error.message)
+        setAuthError(error.message)
+      }
+      
+      if (session?.user) {
+        setUser(session.user)
+        setIsLoading(false)
+      } else {
         router.push("/auth/login")
       }
     })
+
+    // Listen for auth state changes to persist session
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[v0] Account auth state changed:', event)
+      
+      if (event === 'SIGNED_OUT') {
+        setUser(null)
+        router.push('/auth/login')
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session?.user) {
+          setUser(session.user)
+        }
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [router])
   
   const handleSignOut = async () => {
@@ -45,8 +71,22 @@ export default function AccountPage() {
   
   if (isLoading) {
     return (
-      <div className="flex min-h-svh w-full items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      <div className="flex min-h-svh w-full flex-col items-center justify-center bg-background gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">Loading your account...</p>
+      </div>
+    )
+  }
+
+  if (authError) {
+    return (
+      <div className="flex min-h-svh w-full flex-col items-center justify-center bg-background gap-4">
+        <div className="text-center">
+          <p className="text-destructive mb-4">{authError}</p>
+          <Button onClick={() => router.push('/auth/login')}>
+            Go to Login
+          </Button>
+        </div>
       </div>
     )
   }

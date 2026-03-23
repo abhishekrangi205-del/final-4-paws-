@@ -12,6 +12,9 @@ export async function updateSession(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     // If Supabase is not configured, just pass through without auth
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[v0] Middleware - Supabase not configured, passing through')
+    }
     return supabaseResponse
   }
 

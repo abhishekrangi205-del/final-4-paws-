@@ -13,15 +13,45 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { PawPrint } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { PawPrint, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const router = useRouter()
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) {
+      setIsCheckingAuth(false)
+      return
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[v0] Login page - Current session:', !!session)
+      if (session) {
+        router.push('/')
+      } else {
+        setIsCheckingAuth(false)
+      }
+    })
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[v0] Auth state changed:', event, !!session)
+      if (event === 'SIGNED_IN' && session) {
+        router.push('/')
+        router.refresh()
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,24 +60,51 @@ export default function LoginPage() {
     setError(null)
 
     if (!supabase) {
+      console.error('[v0] Supabase client not initialized')
       setError('Unable to connect to authentication service. Please refresh the page and try again.')
       setIsLoading(false)
       return
     }
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('[v0] Attempting login for:', email)
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
-      if (error) throw error
+      
+      if (error) {
+        console.error('[v0] Login error:', error.message)
+        throw error
+      }
+      
+      console.log('[v0] Login successful:', !!data.session)
       router.push('/')
       router.refresh()
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+      // Provide user-friendly error messages
+      if (errorMessage.includes('Invalid login credentials')) {
+        setError('Invalid email or password. Please check your credentials and try again.')
+      } else if (errorMessage.includes('Email not confirmed')) {
+        setError('Please confirm your email address before signing in. Check your inbox for a confirmation link.')
+      } else if (errorMessage.includes('network')) {
+        setError('Network error. Please check your internet connection and try again.')
+      } else {
+        setError(errorMessage)
+      }
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Show loading spinner while checking auth
+  if (isCheckingAuth) {
+    return (
+      <div className="flex min-h-svh w-full items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (

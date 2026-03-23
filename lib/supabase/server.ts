@@ -5,18 +5,17 @@ import { cookies } from 'next/headers'
 /**
  * Server-side Supabase client for use in Server Components and Route Handlers.
  * Creates a new client on each request to properly handle cookies.
+ * Returns null if Supabase is not configured.
  */
 export async function createClient() {
-  const cookieStore = await cookies()
-
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      'Supabase environment variables are not configured. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to your environment variables.'
-    )
+    return null
   }
+
+  const cookieStore = await cookies()
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {

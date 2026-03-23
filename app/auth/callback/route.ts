@@ -19,6 +19,9 @@ export async function GET(request: Request) {
   if (code) {
     try {
       const supabase = await createClient()
+      if (!supabase) {
+        return NextResponse.redirect(`${origin}/auth/error?error=Database+not+configured`)
+      }
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
       if (!exchangeError) {

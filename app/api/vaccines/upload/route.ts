@@ -26,12 +26,12 @@ export async function POST(request: Request) {
     const fileName = `vaccines/${Date.now()}-${file.name}`
     
     const blob = await put(fileName, buffer, {
-      access: 'public',
+      access: 'private',
       contentType: file.type,
     })
     
+    // Return pathname for private blob access (use /api/file?pathname=... to serve)
     return NextResponse.json({
-      url: blob.url,
       pathname: blob.pathname,
     })
   } catch (err) {

@@ -10,19 +10,24 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const supabase = createAdminClient()
-  
-  const { data: bookings, error } = await supabase
-    .from("bookings")
-    .select("*")
-    .order("created_at", { ascending: false })
+  try {
+    const supabase = createAdminClient()
+    
+    const { data: bookings, error } = await supabase
+      .from("bookings")
+      .select("*")
+      .order("created_at", { ascending: false })
 
-  if (error) {
-    console.error("Error fetching bookings:", error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      console.error("Error fetching bookings:", error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json(bookings || [])
+  } catch (err) {
+    console.error("Unexpected error fetching bookings:", err)
+    return NextResponse.json({ error: "Failed to fetch bookings" }, { status: 500 })
   }
-
-  return NextResponse.json(bookings)
 }
 
 export async function PATCH(request: Request) {
@@ -33,23 +38,28 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { id, status } = await request.json()
+  try {
+    const { id, status } = await request.json()
 
-  if (!id || !status) {
-    return NextResponse.json({ error: "Missing id or status" }, { status: 400 })
+    if (!id || !status) {
+      return NextResponse.json({ error: "Missing id or status" }, { status: 400 })
+    }
+
+    const supabase = createAdminClient()
+    
+    const { error } = await supabase
+      .from("bookings")
+      .update({ status })
+      .eq("id", id)
+
+    if (error) {
+      console.error("Error updating booking:", error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    console.error("Unexpected error updating booking:", err)
+    return NextResponse.json({ error: "Failed to update booking" }, { status: 500 })
   }
-
-  const supabase = createAdminClient()
-  
-  const { error } = await supabase
-    .from("bookings")
-    .update({ status })
-    .eq("id", id)
-
-  if (error) {
-    console.error("Error updating booking:", error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ success: true })
 }

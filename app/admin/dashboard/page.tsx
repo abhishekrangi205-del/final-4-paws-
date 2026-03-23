@@ -11,36 +11,48 @@ export default async function AdminDashboardPage() {
     redirect("/admin")
   }
 
-  // Use admin client to bypass RLS for admin operations
-  const supabase = createAdminClient()
-  
-  // Fetch bookings
-  const { data: bookings, error: bookingsError } = await supabase
-    .from("bookings")
-    .select("*")
-    .order("created_at", { ascending: false })
+  let bookings: Array<Record<string, unknown>> = []
+  let pets: Array<Record<string, unknown>> = []
 
-  if (bookingsError) {
-    console.error("Error fetching bookings:", bookingsError)
-  }
+  try {
+    // Use admin client to bypass RLS for admin operations
+    const supabase = createAdminClient()
+    
+    // Fetch bookings
+    const { data: bookingsData, error: bookingsError } = await supabase
+      .from("bookings")
+      .select("*")
+      .order("created_at", { ascending: false })
 
-  // Fetch pets with vaccination records
-  const { data: pets, error: petsError } = await supabase
-    .from("pets")
-    .select(`
-      *,
-      vaccination_records (*)
-    `)
-    .order("created_at", { ascending: false })
+    if (bookingsError) {
+      console.error("Error fetching bookings:", bookingsError)
+    } else {
+      bookings = bookingsData || []
+    }
 
-  if (petsError) {
-    console.error("Error fetching pets:", petsError)
+    // Fetch pets with vaccination records
+    const { data: petsData, error: petsError } = await supabase
+      .from("pets")
+      .select(`
+        *,
+        vaccination_records (*)
+      `)
+      .order("created_at", { ascending: false })
+
+    if (petsError) {
+      console.error("Error fetching pets:", petsError)
+    } else {
+      pets = petsData || []
+    }
+  } catch (error) {
+    console.error("Error initializing admin client:", error)
+    // Continue with empty data - the dashboard will show empty state
   }
 
   return (
     <AdminDashboard 
-      initialBookings={bookings || []} 
-      initialPets={pets || []}
+      initialBookings={bookings} 
+      initialPets={pets}
     />
   )
 }

@@ -33,6 +33,10 @@ export default function SignUpPage() {
     const checkAuth = async () => {
       try {
         const supabase = createClient()
+        if (!supabase) {
+          setIsCheckingAuth(false)
+          return
+        }
         const { data: { session } } = await supabase.auth.getSession()
 
         if (!isMounted) return
@@ -77,6 +81,11 @@ export default function SignUpPage() {
 
     try {
       const supabase = createClient()
+      if (!supabase) {
+        setError('Authentication service is not configured. Please contact support.')
+        setIsLoading(false)
+        return
+      }
       const { error } = await supabase.auth.signUp({
         email,
         password,

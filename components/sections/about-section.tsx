@@ -28,7 +28,10 @@ export function AboutSection() {
               Where Pets Are Family, Not Just Clients
             </h2>
             <p className="text-muted-foreground text-base md:text-lg leading-relaxed">
-              All 4 Paws Playcare is your trusted destination for pet grooming and daycare services. Our safe, fun environment lets pets socialize, play, and get pampered by our expert team. Every visit is a tail-wagging experience!
+              At All 4 Paws Playcare Inc., our goal is to be the go-to pet care provider here in Sudbury, ON, while providing exceptional care, socialization, and unforgettable adventures for your fur baby.
+            </p>
+            <p className="text-muted-foreground text-base md:text-lg leading-relaxed mt-4">
+              Our mission is to create a <span className="font-semibold text-foreground">safe, fun, happy, healthy,</span> and nurturing environment while providing peace of mind for you!
             </p>
           </div>
         </div>

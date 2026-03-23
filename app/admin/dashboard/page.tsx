@@ -14,14 +14,33 @@ export default async function AdminDashboardPage() {
   // Use admin client to bypass RLS for admin operations
   const supabase = createAdminClient()
   
-  const { data: bookings, error } = await supabase
+  // Fetch bookings
+  const { data: bookings, error: bookingsError } = await supabase
     .from("bookings")
     .select("*")
     .order("created_at", { ascending: false })
 
-  if (error) {
-    console.error("Error fetching bookings:", error)
+  if (bookingsError) {
+    console.error("Error fetching bookings:", bookingsError)
   }
 
-  return <AdminDashboard initialBookings={bookings || []} />
+  // Fetch pets with vaccination records
+  const { data: pets, error: petsError } = await supabase
+    .from("pets")
+    .select(`
+      *,
+      vaccination_records (*)
+    `)
+    .order("created_at", { ascending: false })
+
+  if (petsError) {
+    console.error("Error fetching pets:", petsError)
+  }
+
+  return (
+    <AdminDashboard 
+      initialBookings={bookings || []} 
+      initialPets={pets || []}
+    />
+  )
 }

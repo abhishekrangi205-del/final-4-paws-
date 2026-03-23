@@ -13,6 +13,10 @@ export async function GET() {
   try {
     const supabase = createAdminClient()
     
+    if (!supabase) {
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 })
+    }
+    
     const { data: bookings, error } = await supabase
       .from("bookings")
       .select("*")
@@ -46,6 +50,10 @@ export async function PATCH(request: Request) {
     }
 
     const supabase = createAdminClient()
+    
+    if (!supabase) {
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 })
+    }
     
     const { error } = await supabase
       .from("bookings")

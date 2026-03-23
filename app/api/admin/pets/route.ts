@@ -13,6 +13,10 @@ export async function GET() {
   try {
     const supabase = createAdminClient()
     
+    if (!supabase) {
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 })
+    }
+    
     const { data: pets, error } = await supabase
       .from("pets")
       .select(`

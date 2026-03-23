@@ -198,6 +198,13 @@ export function AdminDashboard({
     }
   }
 
+  // Load data on component mount
+  useEffect(() => {
+    refreshBookings()
+    refreshPets()
+    refreshVaccinations()
+  }, [])
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}

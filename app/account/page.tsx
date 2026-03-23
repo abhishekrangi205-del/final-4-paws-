@@ -19,54 +19,72 @@ export default function AccountPage() {
   const router = useRouter()
   
   useEffect(() => {
-    const supabase = createClient()
-    
-    if (!supabase) {
-      console.error('[v0] Supabase client not available')
-      setAuthError('Unable to connect to authentication service')
-      setIsLoading(false)
-      return
-    }
-    
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('[v0] Account page - Session check:', !!session)
-      if (error) {
-        console.error('[v0] Session error:', error.message)
-        setAuthError(error.message)
-      }
-      
-      if (session?.user) {
-        setUser(session.user)
-        setIsLoading(false)
-      } else {
-        router.push("/auth/login")
-      }
-    })
+    let isMounted = true
 
-    // Listen for auth state changes to persist session
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[v0] Account auth state changed:', event)
-      
-      if (event === 'SIGNED_OUT') {
-        setUser(null)
-        router.push('/auth/login')
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+    const initAuth = async () => {
+      try {
+        const supabase = createClient()
+        
+        // Get initial session
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (!isMounted) return
+        
+        if (error) {
+          setAuthError(error.message)
+          setIsLoading(false)
+          return
+        }
+        
         if (session?.user) {
           setUser(session.user)
+          setIsLoading(false)
+        } else {
+          router.push("/auth/login")
+        }
+
+        // Listen for auth state changes to persist session
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'SIGNED_OUT') {
+            setUser(null)
+            router.push('/auth/login')
+          } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            if (session?.user) {
+              setUser(session.user)
+            }
+          }
+        })
+
+        return () => subscription.unsubscribe()
+      } catch (err) {
+        if (isMounted) {
+          const errorMessage = err instanceof Error ? err.message : 'Unable to connect to authentication service'
+          if (errorMessage.includes('environment variables')) {
+            setAuthError('Authentication service is not configured. Please contact support.')
+          } else {
+            setAuthError(errorMessage)
+          }
+          setIsLoading(false)
         }
       }
-    })
+    }
 
-    return () => subscription.unsubscribe()
+    initAuth()
+
+    return () => {
+      isMounted = false
+    }
   }, [router])
   
   const handleSignOut = async () => {
-    const supabase = createClient()
-    if (!supabase) return
-    await supabase.auth.signOut()
-    router.push("/")
-    router.refresh()
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+      router.push("/")
+      router.refresh()
+    } catch (err) {
+      console.error('Sign out error:', err)
+    }
   }
   
   if (isLoading) {
@@ -81,8 +99,10 @@ export default function AccountPage() {
   if (authError) {
     return (
       <div className="flex min-h-svh w-full flex-col items-center justify-center bg-background gap-4">
-        <div className="text-center">
-          <p className="text-destructive mb-4">{authError}</p>
+        <div className="text-center max-w-md px-4">
+          <div className="rounded-md bg-destructive/10 p-4 text-destructive mb-6">
+            {authError}
+          </div>
           <Button onClick={() => router.push('/auth/login')}>
             Go to Login
           </Button>
@@ -240,24 +260,28 @@ export default function AccountPage() {
 }
 
 function BookingsTab({ userId }: { userId: string }) {
-  const [bookings, setBookings] = useState<any[]>([])
+  const [bookings, setBookings] = useState<Record<string, unknown>[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   
   useEffect(() => {
     const fetchBookings = async () => {
-      const supabase = createClient()
-      if (!supabase) {
+      try {
+        const supabase = createClient()
+        const { data, error: fetchError } = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("user_id", userId)
+          .order("booking_date", { ascending: false })
+        
+        if (fetchError) throw fetchError
+        setBookings(data || [])
+      } catch (err) {
+        console.error('Error fetching bookings:', err)
+        setError('Failed to load bookings')
+      } finally {
         setIsLoading(false)
-        return
       }
-      const { data } = await supabase
-        .from("bookings")
-        .select("*")
-        .eq("user_id", userId)
-        .order("booking_date", { ascending: false })
-      
-      setBookings(data || [])
-      setIsLoading(false)
     }
     fetchBookings()
   }, [userId])
@@ -265,7 +289,18 @@ function BookingsTab({ userId }: { userId: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-pulse text-muted-foreground">Loading bookings...</div>
+        <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+        <span className="text-muted-foreground">Loading bookings...</span>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <div className="rounded-md bg-destructive/10 p-4 text-destructive mb-4 inline-block">
+          {error}
+        </div>
       </div>
     )
   }
@@ -298,14 +333,14 @@ function BookingsTab({ userId }: { userId: string }) {
       
       {bookings.map((booking) => (
         <div 
-          key={booking.id}
+          key={booking.id as string}
           className="bg-card border border-border rounded-xl p-4"
         >
           <div className="flex items-start justify-between mb-2">
             <div>
-              <h3 className="font-semibold text-foreground">{booking.service}</h3>
+              <h3 className="font-semibold text-foreground">{booking.service as string}</h3>
               <p className="text-sm text-muted-foreground">
-                {new Date(booking.booking_date).toLocaleDateString("en-US", {
+                {new Date(booking.booking_date as string).toLocaleDateString("en-US", {
                   weekday: "long",
                   year: "numeric",
                   month: "long",
@@ -314,14 +349,14 @@ function BookingsTab({ userId }: { userId: string }) {
                 {booking.booking_time && ` at ${booking.booking_time}`}
               </p>
             </div>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[booking.status] || "bg-secondary"}`}>
-              {booking.status}
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[booking.status as string] || "bg-secondary"}`}>
+              {booking.status as string}
             </span>
           </div>
           <div className="text-sm text-muted-foreground">
-            <span>Pet: {booking.pet_name}</span>
+            <span>Pet: {booking.pet_name as string}</span>
             {booking.total_price_cents && (
-              <span className="ml-4">Total: ${(booking.total_price_cents / 100).toFixed(2)}</span>
+              <span className="ml-4">Total: ${((booking.total_price_cents as number) / 100).toFixed(2)}</span>
             )}
           </div>
         </div>

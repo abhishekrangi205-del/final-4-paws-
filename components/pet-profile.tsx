@@ -225,12 +225,25 @@ function PetCard({
   onRefresh: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [editingVaccine, setEditingVaccine] = useState<VaccinationRecord | null>(null)
   
   const handleDeleteVaccine = async (vaccinationId: string) => {
     if (confirm("Delete this vaccination record?")) {
       await fetch(`/api/pets/${pet.id}/vaccinations?vaccinationId=${vaccinationId}`, {
         method: "DELETE",
       })
+      onRefresh()
+    }
+  }
+  
+  const handleUpdateVaccine = async (vaccinationId: string, data: Partial<VaccinationRecord>) => {
+    const res = await fetch(`/api/pets/${pet.id}/vaccinations`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vaccinationId, ...data }),
+    })
+    if (res.ok) {
+      setEditingVaccine(null)
       onRefresh()
     }
   }
@@ -384,6 +397,12 @@ function PetCard({
                         </a>
                       )}
                       <button
+                        onClick={() => setEditingVaccine(vax)}
+                        className="p-1.5 hover:bg-secondary rounded"
+                      >
+                        <Edit2 className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      <button
                         onClick={() => handleDeleteVaccine(vax.id)}
                         className="p-1.5 hover:bg-secondary rounded"
                       >
@@ -397,6 +416,216 @@ function PetCard({
           </div>
         </div>
       )}
+      
+      {/* Edit Vaccination Modal */}
+      {editingVaccine && (
+        <EditVaccinationModal
+          vaccination={editingVaccine}
+          petId={pet.id}
+          onSave={(data) => handleUpdateVaccine(editingVaccine.id, data)}
+          onCancel={() => setEditingVaccine(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function EditVaccinationModal({
+  vaccination,
+  petId,
+  onSave,
+  onCancel,
+}: {
+  vaccination: VaccinationRecord
+  petId: string
+  onSave: (data: Partial<VaccinationRecord>) => void
+  onCancel: () => void
+}) {
+  const [formData, setFormData] = useState({
+    vaccine_name: vaccination.vaccine_name,
+    date_administered: vaccination.date_administered,
+    expiration_date: vaccination.expiration_date || "",
+    notes: vaccination.notes || "",
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [documentUploading, setDocumentUploading] = useState(false)
+  const [documentPathname, setDocumentPathname] = useState<string | null>(vaccination.document_pathname)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    setDocumentUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("type", "vaccination")
+      formData.append("petId", petId)
+      
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+      
+      if (res.ok) {
+        const { pathname } = await res.json()
+        setDocumentPathname(pathname)
+      }
+    } catch (err) {
+      console.error("Upload failed:", err)
+    } finally {
+      setDocumentUploading(false)
+    }
+  }
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    
+    onSave({
+      vaccine_name: formData.vaccine_name,
+      date_administered: formData.date_administered,
+      expiration_date: formData.expiration_date || null,
+      notes: formData.notes || null,
+      document_pathname: documentPathname,
+    })
+    
+    setIsSubmitting(false)
+  }
+  
+  return (
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-card border border-border rounded-xl w-full max-w-md">
+        <div className="border-b border-border p-4 flex items-center justify-between">
+          <h3 className="font-semibold text-lg flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            Edit Vaccination Record
+          </h3>
+          <button onClick={onCancel} className="p-2 hover:bg-secondary rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Vaccine Name *</label>
+            <select
+              required
+              value={commonVaccines.includes(formData.vaccine_name) ? formData.vaccine_name : "other"}
+              onChange={(e) => setFormData(prev => ({ ...prev, vaccine_name: e.target.value }))}
+              className="w-full px-3 py-2 rounded-lg border border-input bg-background"
+            >
+              <option value="">Select vaccine...</option>
+              {commonVaccines.map(v => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+              <option value="other">Other</option>
+            </select>
+            {!commonVaccines.includes(formData.vaccine_name) && (
+              <Input
+                className="mt-2"
+                placeholder="Enter vaccine name"
+                value={formData.vaccine_name}
+                onChange={(e) => setFormData(prev => ({ ...prev, vaccine_name: e.target.value }))}
+              />
+            )}
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Date Given *</label>
+              <Input
+                type="date"
+                required
+                value={formData.date_administered}
+                onChange={(e) => setFormData(prev => ({ ...prev, date_administered: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Expiration Date</label>
+              <Input
+                type="date"
+                value={formData.expiration_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, expiration_date: e.target.value }))}
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Notes</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+              placeholder="Any additional notes"
+              rows={2}
+              className="w-full px-3 py-2 rounded-lg border border-input bg-background resize-none"
+            />
+          </div>
+          
+          {/* Document Upload */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Vaccination Document</label>
+            {documentPathname ? (
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <FileText className="w-5 h-5 text-green-600" />
+                <span className="text-sm text-green-700 flex-1">Document uploaded</span>
+                <a 
+                  href={`/api/file?pathname=${encodeURIComponent(documentPathname)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-green-600 hover:text-green-800 p-1"
+                >
+                  <FileText className="w-4 h-4" />
+                </a>
+                <button 
+                  type="button" 
+                  onClick={() => setDocumentPathname(null)}
+                  className="text-green-600 hover:text-green-800"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={documentUploading}
+                className="w-full p-4 border-2 border-dashed border-border rounded-lg hover:bg-secondary/50 transition-colors flex items-center justify-center gap-2"
+              >
+                {documentUploading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <Upload className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Click to upload or replace</span>
+                  </>
+                )}
+              </button>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,application/pdf"
+              onChange={handleDocumentUpload}
+              className="hidden"
+            />
+          </div>
+          
+          {/* Actions */}
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting || documentUploading} className="flex-1">
+              {isSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

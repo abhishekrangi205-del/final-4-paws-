@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
     // Upload to Vercel Blob (private store)
     const blob = await put(filename, file, {
       access: "private",
+      token: process.env.BLOB_READ_WRITE_TOKEN,
     })
 
     // Return pathname for private blob access (use /api/file?pathname=... to serve)

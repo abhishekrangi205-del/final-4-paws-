@@ -20,16 +20,13 @@ export async function GET() {
     
     const { data: pets, error } = await supabase
       .from("pets")
-      .select(`
-        *,
-        vaccination_records (*)
-      `)
+      .select("*")
       .order("created_at", { ascending: false })
     
     if (error) {
-      // If table doesn't exist, return empty array instead of error
-      if (error.message.includes("not found") || error.message.includes("does not exist")) {
-        console.log("Pets table not found, returning empty array")
+      // If table doesn't exist or relationship not found, return empty array
+      if (error.message.includes("not found") || error.message.includes("does not exist") || error.message.includes("relationship")) {
+        console.log("Pets table not found or relationship error, returning empty array")
         return NextResponse.json([])
       }
       console.error("Error fetching pets:", error)

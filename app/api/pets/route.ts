@@ -9,76 +9,49 @@ function maskId(id: string | undefined): string {
 }
 
 export async function GET() {
-  console.log('[v0] === PETS GET TEST START ===')
-  
   try {
     const supabase = await createClient()
     
     if (!supabase) {
-      console.log('[v0] ERROR: Supabase client not configured')
       return NextResponse.json([])
     }
-    console.log('[v0] Supabase client initialized')
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError) {
-      console.log('[v0] Auth error:', authError.message)
-    }
+    const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
-      console.log('[v0] No authenticated user found')
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
     
-    // Log user info (masked for security)
-    console.log('[v0] Authenticated User:')
-    console.log('[v0]   - ID:', maskId(user.id))
-    console.log('[v0]   - Email:', user.email ? `${user.email.substring(0, 3)}...@...` : 'N/A')
-    console.log('[v0]   - Created:', user.created_at)
-    
-    // Try to fetch user's pets with vaccination_records joined
+    // First, try a simple fetch to see if user_id column exists
+    let hasUserIdColumn = true
     let { data: pets, error } = await supabase
       .from("pets")
-      .select("*, vaccination_records(*)")
+      .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
     
-    console.log('[v0] Initial fetch result - pets:', pets?.length || 0, 'error:', error?.message || 'none')
-    
-    // If user_id column doesn't exist, fall back to fetching all pets
+    // Check if user_id column doesn't exist
     if (error && (error.code === "PGRST204" || error.code === "42703" || error.message?.includes("user_id") || error.message?.includes("does not exist"))) {
-      console.log('[v0] Falling back to fetch without user_id filter')
+      hasUserIdColumn = false
+      // Fetch all pets without user_id filter
       const fallback = await supabase
         .from("pets")
-        .select("*, vaccination_records(*)")
+        .select("*")
         .order("created_at", { ascending: false })
       
       pets = fallback.data
       error = fallback.error
-      console.log('[v0] Fallback result - pets:', pets?.length || 0, 'error:', error?.message || 'none')
     }
 
-    // If vaccination_records join fails, fetch pets without it
     if (error) {
-      console.log('[v0] Vaccination join failed, fetching pets without vaccination records')
-      const basic = await supabase
-        .from("pets")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-      
-      if (basic.error) {
-        console.log('[v0] Basic fetch also failed:', basic.error.message)
-        return NextResponse.json([])
-      }
-      
-      pets = (basic.data || []).map(p => ({ ...p, vaccination_records: [] }))
-      console.log('[v0] Basic fetch result - pets:', pets.length)
+      console.log('[v0] Error fetching pets:', error.message)
+      return NextResponse.json([])
     }
     
-    console.log('[v0] Returning', pets?.length || 0, 'pets')
-    return NextResponse.json(pets || [])
+    // Add empty vaccination_records to each pet (vaccination join not working)
+    const petsWithVaccinations = (pets || []).map(p => ({ ...p, vaccination_records: [] }))
+    
+    return NextResponse.json(petsWithVaccinations)
   } catch (err) {
     console.error("[v0] Unexpected error in GET /api/pets:", err)
     return NextResponse.json([])
@@ -86,35 +59,20 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  console.log('[v0] === PETS POST TEST START ===')
-  
   try {
     const supabase = await createClient()
     
     if (!supabase) {
-      console.log('[v0] ERROR: Supabase client not configured')
       return NextResponse.json({ error: "Database not configured" }, { status: 503 })
     }
-    console.log('[v0] Supabase client initialized')
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError) {
-      console.log('[v0] Auth error:', authError.message)
-    }
+    const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
-      console.log('[v0] No authenticated user found')
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
     
-    console.log('[v0] Authenticated User ID:', maskId(user.id))
-    
     const body = await request.json()
-    console.log('[v0] Request body received:')
-    console.log('[v0]   - Name:', body.name)
-    console.log('[v0]   - Breed:', body.breed || 'N/A')
-    console.log('[v0]   - Size:', body.size || 'N/A')
     
     // Build insert data - try with user_id first
     const insertData: Record<string, unknown> = {
@@ -161,10 +119,6 @@ export async function POST(request: Request) {
     if (error) {
       return NextResponse.json({ error: "Failed to create pet" }, { status: 500 })
     }
-    
-    console.log('[v0] Pet created successfully!')
-    console.log('[v0] Pet ID:', maskId(pet.id))
-    console.log('[v0] === PETS POST TEST COMPLETE ===')
     
     return NextResponse.json(pet)
   } catch (err) {

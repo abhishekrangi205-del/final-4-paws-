@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { get } from '@vercel/blob'
+import { head } from '@vercel/blob'
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,33 +9,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing pathname' }, { status: 400 })
     }
 
-    const result = await get(pathname, {
-      access: 'private',
-      ifNoneMatch: request.headers.get('if-none-match') ?? undefined,
-    })
+    // Get the blob metadata to find the public URL
+    const blob = await head(pathname)
 
-    if (!result) {
+    if (!blob) {
       return new NextResponse('Not found', { status: 404 })
     }
 
-    // Blob hasn't changed — tell the browser to use its cached copy
-    if (result.statusCode === 304) {
-      return new NextResponse(null, {
-        status: 304,
-        headers: {
-          ETag: result.blob.etag,
-          'Cache-Control': 'private, no-cache',
-        },
-      })
-    }
-
-    return new NextResponse(result.stream, {
-      headers: {
-        'Content-Type': result.blob.contentType,
-        ETag: result.blob.etag,
-        'Cache-Control': 'private, no-cache',
-      },
-    })
+    // Redirect to the actual blob URL for public blobs
+    return NextResponse.redirect(blob.url)
   } catch (error) {
     console.error('Error serving file:', error)
     return NextResponse.json({ error: 'Failed to serve file' }, { status: 500 })

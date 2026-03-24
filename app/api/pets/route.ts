@@ -45,7 +45,7 @@ export async function GET() {
       .order("created_at", { ascending: false })
     
     // If user_id column doesn't exist, fall back to fetching all pets
-    if (error && (error.code === "PGRST204" || error.message.includes("user_id"))) {
+    if (error && (error.code === "PGRST204" || error.code === "42703" || error.message?.includes("user_id") || error.message?.includes("does not exist"))) {
       const fallback = await supabase
         .from("pets")
         .select("*")
@@ -127,7 +127,7 @@ export async function POST(request: Request) {
       .single()
     
     // If user_id column doesn't exist, retry without it
-    if (error && (error.code === "PGRST204" || error.message.includes("user_id"))) {
+    if (error && (error.code === "PGRST204" || error.code === "42703" || error.message?.includes("user_id") || error.message?.includes("does not exist"))) {
       delete insertData.user_id
       const retry = await supabase
         .from("pets")

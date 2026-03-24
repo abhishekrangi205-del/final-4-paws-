@@ -42,7 +42,25 @@ export default function MyPetsPage() {
         const response = await fetch("/api/pets/details")
         if (response.ok) {
           const data = await response.json()
-          setPets(Array.isArray(data) ? data : [])
+          const petsArray = Array.isArray(data) ? data : []
+          
+          // Fetch vaccinations from Blob storage for each pet
+          const petsWithVaccinations = await Promise.all(
+            petsArray.map(async (pet) => {
+              try {
+                const vaccResponse = await fetch(`/api/vaccinations/list?petId=${pet.id}`)
+                if (vaccResponse.ok) {
+                  const vaccinations = await vaccResponse.json()
+                  return { ...pet, vaccinations: Array.isArray(vaccinations) ? vaccinations : [] }
+                }
+              } catch (err) {
+                console.error(`Failed to fetch vaccinations for pet ${pet.id}:`, err)
+              }
+              return { ...pet, vaccinations: [] }
+            })
+          )
+          
+          setPets(petsWithVaccinations)
         }
       } catch (err) {
         console.error("Failed to fetch pets:", err)
@@ -214,60 +232,37 @@ export default function MyPetsPage() {
 
                       {pet.vaccinations && pet.vaccinations.length > 0 ? (
                         <div className="space-y-3">
-                          {pet.vaccinations.map((vaccine) => {
-                            const status = getVaccineStatus(vaccine)
-                            return (
-                              <div
-                                key={vaccine.id}
-                                className={`p-4 rounded-lg border ${
-                                  status === "expired"
-                                    ? "bg-red-50/50 border-red-200"
-                                    : status === "active"
-                                    ? "bg-green-50/50 border-green-200"
-                                    : "bg-secondary/50 border-border"
-                                }`}
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <p className="font-medium text-foreground">{vaccine.vaccine_name}</p>
-                                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-                                      {vaccine.date_administered && (
-                                        <span className="flex items-center gap-1">
-                                          <Calendar className="w-4 h-4" />
-                                          {new Date(vaccine.date_administered).toLocaleDateString()}
-                                        </span>
-                                      )}
-                                      {vaccine.expiry_date && (
-                                        <span className={status === "expired" ? "text-red-600 font-medium" : ""}>
-                                          Expires: {new Date(vaccine.expiry_date).toLocaleDateString()}
-                                        </span>
-                                      )}
-                                    </div>
-                                    {vaccine.notes && (
-                                      <p className="text-sm mt-2 text-muted-foreground">{vaccine.notes}</p>
-                                    )}
+                          {pet.vaccinations.map((vaccine) => (
+                            <div
+                              key={vaccine.id}
+                              className="p-4 rounded-lg border bg-secondary/50 border-border"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-muted-foreground" />
+                                    <p className="font-medium text-foreground">{vaccine.fileName}</p>
                                   </div>
-                                  {vaccine.document_url && (
-                                    <a
-                                      href={vaccine.document_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="ml-4 p-2 hover:bg-secondary rounded-lg transition-colors"
-                                    >
-                                      <FileText className="w-5 h-5 text-primary" />
-                                    </a>
-                                  )}
+                                  <p className="text-sm text-muted-foreground mt-1">{vaccine.fileName}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Uploaded: {new Date(vaccine.uploadedAt).toLocaleDateString()}
+                                  </p>
                                 </div>
+                                <a
+                                  href={vaccine.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="ml-4 px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 transition-colors"
+                                >
+                                  View
+                                </a>
                               </div>
-                            )
-                          })}
+                            </div>
+                          ))}
                         </div>
                       ) : (
-                        <div className="p-4 bg-secondary/30 rounded-lg border border-border text-center">
-                          <p className="text-muted-foreground">No vaccination records yet</p>
-                          <Button size="sm" className="mt-3" asChild>
-                            <Link href="/profile/vaccines">Upload Vaccination</Link>
-                          </Button>
+                        <div className="p-4 rounded-lg border border-dashed border-border bg-secondary/30">
+                          <p className="text-sm text-muted-foreground text-center">No vaccination records yet</p>
                         </div>
                       )}
                     </div>

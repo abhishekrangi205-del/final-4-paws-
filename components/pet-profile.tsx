@@ -69,12 +69,20 @@ export function PetProfileManager() {
   
   const fetchPets = useCallback(async () => {
     try {
+      console.log("[v0] Fetching pets from client...")
       const res = await fetch("/api/pets")
+      console.log("[v0] Response status:", res.status)
       if (res.ok) {
         const data = await res.json()
+        console.log("[v0] Pets received:", data.length, "pets")
         setPets(data)
+      } else {
+        const errorData = await res.json().catch(() => ({}))
+        console.log("[v0] Error response:", errorData)
+        setError(errorData.error || "Failed to load pets")
       }
     } catch (err) {
+      console.log("[v0] Fetch error:", err)
       setError("Failed to load pets")
     } finally {
       setIsLoading(false)
@@ -153,13 +161,16 @@ export function PetProfileManager() {
         <PetForm 
           onSave={async (data) => {
             try {
+              console.log("[v0] Adding new pet:", data.pet.name)
               const res = await fetch("/api/pets", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data.pet),
               })
+              console.log("[v0] Add pet response status:", res.status)
               if (res.ok) {
                 const newPet = await res.json()
+                console.log("[v0] Pet created with ID:", newPet.id)
                 // Add vaccinations if any were included
                 if (data.vaccinations && data.vaccinations.length > 0) {
                   for (const vax of data.vaccinations) {
@@ -171,12 +182,15 @@ export function PetProfileManager() {
                   }
                 }
                 setShowAddPet(false)
+                console.log("[v0] Refreshing pets list...")
                 fetchPets()
               } else {
                 const errorData = await res.json()
+                console.log("[v0] Add pet failed:", errorData)
                 setError(errorData.error || "Failed to add pet")
               }
             } catch (err) {
+              console.log("[v0] Add pet exception:", err)
               setError("Failed to add pet. Please make sure the database is set up.")
             }
           }}

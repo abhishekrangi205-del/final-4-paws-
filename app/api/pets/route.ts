@@ -44,8 +44,11 @@ export async function GET() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
     
+    console.log('[v0] Initial fetch result - pets:', pets?.length || 0, 'error:', error?.message || 'none')
+    
     // If user_id column doesn't exist, fall back to fetching all pets
     if (error && (error.code === "PGRST204" || error.code === "42703" || error.message?.includes("user_id") || error.message?.includes("does not exist"))) {
+      console.log('[v0] Falling back to fetch without user_id filter')
       const fallback = await supabase
         .from("pets")
         .select("*, vaccination_records(*)")
@@ -53,23 +56,28 @@ export async function GET() {
       
       pets = fallback.data
       error = fallback.error
+      console.log('[v0] Fallback result - pets:', pets?.length || 0, 'error:', error?.message || 'none')
     }
 
     // If vaccination_records join fails, fetch pets without it
     if (error) {
+      console.log('[v0] Vaccination join failed, fetching pets without vaccination records')
       const basic = await supabase
         .from("pets")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
+      
+      if (basic.error) {
+        console.log('[v0] Basic fetch also failed:', basic.error.message)
+        return NextResponse.json([])
+      }
+      
       pets = (basic.data || []).map(p => ({ ...p, vaccination_records: [] }))
-      error = basic.error
+      console.log('[v0] Basic fetch result - pets:', pets.length)
     }
     
-    if (error) {
-      return NextResponse.json([])
-    }
-    
+    console.log('[v0] Returning', pets?.length || 0, 'pets')
     return NextResponse.json(pets || [])
   } catch (err) {
     console.error("[v0] Unexpected error in GET /api/pets:", err)

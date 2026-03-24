@@ -13,6 +13,23 @@ export async function GET(
       return NextResponse.json([])
     }
     
+    // Verify user is authenticated
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
+    // Just verify pet exists (skip user_id check if column doesn't exist)
+    const { data: pet } = await supabase
+      .from("pets")
+      .select("id")
+      .eq("id", petId)
+      .single()
+    
+    if (!pet) {
+      return NextResponse.json({ error: "Pet not found" }, { status: 404 })
+    }
+    
     const { data: vaccinations, error } = await supabase
       .from("vaccination_records")
       .select("*")
@@ -20,7 +37,6 @@ export async function GET(
       .order("created_at", { ascending: false })
     
     if (error) {
-      console.error("Error fetching vaccinations:", error)
       return NextResponse.json([])
     }
     
@@ -41,6 +57,23 @@ export async function POST(
     
     if (!supabase) {
       return NextResponse.json({ error: "Database not configured" }, { status: 503 })
+    }
+    
+    // Verify user is authenticated
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
+    // Verify pet exists
+    const { data: pet } = await supabase
+      .from("pets")
+      .select("id")
+      .eq("id", petId)
+      .single()
+    
+    if (!pet) {
+      return NextResponse.json({ error: "Pet not found" }, { status: 404 })
     }
     
     const body = await request.json()
@@ -89,6 +122,23 @@ export async function PATCH(
     
     if (!supabase) {
       return NextResponse.json({ error: "Database not configured" }, { status: 503 })
+    }
+    
+    // Verify user is authenticated
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
+    // Verify pet exists
+    const { data: pet } = await supabase
+      .from("pets")
+      .select("id")
+      .eq("id", petId)
+      .single()
+    
+    if (!pet) {
+      return NextResponse.json({ error: "Pet not found" }, { status: 404 })
     }
     
     const body = await request.json()
@@ -141,6 +191,23 @@ export async function DELETE(
     
     if (!supabase) {
       return NextResponse.json({ error: "Database not configured" }, { status: 503 })
+    }
+    
+    // Verify user is authenticated
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
+    // Verify pet exists
+    const { data: pet } = await supabase
+      .from("pets")
+      .select("id")
+      .eq("id", petId)
+      .single()
+    
+    if (!pet) {
+      return NextResponse.json({ error: "Pet not found" }, { status: 404 })
     }
     
     const { searchParams } = new URL(request.url)

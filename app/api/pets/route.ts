@@ -37,20 +37,27 @@ export async function GET() {
     console.log('[v0]   - Email:', user.email ? `${user.email.substring(0, 3)}...@...` : 'N/A')
     console.log('[v0]   - Created:', user.created_at)
     
-    // Fetch pets - just get all data from pets table
-    console.log('[v0] Fetching pets from database...')
-    const { data: pets, error } = await supabase
+    // Try to fetch user's pets by user_id first
+    let { data: pets, error } = await supabase
       .from("pets")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false })
     
-    if (error) {
-      console.log('[v0] ERROR fetching pets:', error.message)
-      return NextResponse.json([])
+    // If user_id column doesn't exist, fall back to fetching all pets
+    if (error && (error.code === "PGRST204" || error.code === "42703" || error.message?.includes("user_id") || error.message?.includes("does not exist"))) {
+      const fallback = await supabase
+        .from("pets")
+        .select("*")
+        .order("created_at", { ascending: false })
+      
+      pets = fallback.data
+      error = fallback.error
     }
     
-    console.log('[v0] Pets found:', pets?.length || 0)
-    console.log('[v0] === PETS GET TEST COMPLETE ===')
+    if (error) {
+      return NextResponse.json([])
+    }
     
     return NextResponse.json(pets || [])
   } catch (err) {
@@ -90,7 +97,7 @@ export async function POST(request: Request) {
     console.log('[v0]   - Breed:', body.breed || 'N/A')
     console.log('[v0]   - Size:', body.size || 'N/A')
     
-    // Start with basic fields that should always exist
+    // Build insert data - try with user_id first
     const insertData: Record<string, unknown> = {
       name: body.name,
     }
@@ -101,8 +108,11 @@ export async function POST(request: Request) {
       'spayed_neutered', 'medical_notes', 'special_instructions',
       'emergency_contact_name', 'emergency_contact_phone',
       'vet_name', 'vet_phone', 'profile_image_url',
-      'age_years', 'age_months'
+      'age_years', 'age_months', 'user_id'
     ]
+    
+    // Try to add user_id
+    insertData.user_id = user.id
     
     optionalFields.forEach(field => {
       if (body[field] !== undefined && body[field] !== null && body[field] !== '') {
@@ -110,18 +120,26 @@ export async function POST(request: Request) {
       }
     })
     
-    console.log('[v0] Insert data fields:', Object.keys(insertData).join(', '))
-    console.log('[v0] Inserting pet into database...')
-    
-    const { data: pet, error } = await supabase
+    let { data: pet, error } = await supabase
       .from("pets")
       .insert(insertData)
       .select()
       .single()
     
+    // If user_id column doesn't exist, retry without it
+    if (error && (error.code === "PGRST204" || error.code === "42703" || error.message?.includes("user_id") || error.message?.includes("does not exist"))) {
+      delete insertData.user_id
+      const retry = await supabase
+        .from("pets")
+        .insert(insertData)
+        .select()
+        .single()
+      
+      pet = retry.data
+      error = retry.error
+    }
+    
     if (error) {
-      console.log('[v0] ERROR creating pet:', error.message)
-      console.log('[v0] Error code:', error.code)
       return NextResponse.json({ error: "Failed to create pet" }, { status: 500 })
     }
     

@@ -1,25 +1,35 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Upload, FileText, Image, Loader2, Check, X, Trash2 } from "lucide-react"
+import { ArrowLeft, Upload, FileText, Image, Loader2, Check, X, Trash2, Calendar } from "lucide-react"
 import Link from "next/link"
 
-type UploadedFile = {
+type Pet = {
   id: string
   name: string
+}
+
+type UploadedVaccination = {
+  id: string
+  petName: string
+  vaccineName: string
+  vaccinationDate: string
+  fileName: string
+  uploadedAt: Date
   url: string
   pathname: string
-  contentType: string
-  uploadedAt: Date
 }
 
 export default function VaccinesPage() {
-  const router = useRouter()
-  const [files, setFiles] = useState<UploadedFile[]>([])
+  const [pets, setPets] = useState<Pet[]>([])
+  const [selectedPetId, setSelectedPetId] = useState("")
+  const [vaccineName, setVaccineName] = useState("")
+  const [vaccinationDate, setVaccinationDate] = useState("")
+  const [notes, setNotes] = useState("")
+  const [vaccinations, setVaccinations] = useState<UploadedVaccination[]>([])
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -34,6 +44,22 @@ export default function VaccinesPage() {
   ]
   const maxSize = 10 * 1024 * 1024 // 10MB
 
+  // Fetch pets on mount
+  useEffect(() => {
+    const fetchPets = async () => {
+      try {
+        const response = await fetch("/api/pets")
+        if (response.ok) {
+          const data = await response.json()
+          setPets(Array.isArray(data) ? data : [])
+        }
+      } catch (err) {
+        console.error("Failed to fetch pets:", err)
+      }
+    }
+    fetchPets()
+  }, [])
+
   const validateFile = (file: File): string | null => {
     if (!allowedTypes.includes(file.type)) {
       return "Invalid file type. Only JPG, PNG, WEBP, and PDF are allowed."
@@ -45,6 +71,19 @@ export default function VaccinesPage() {
   }
 
   const uploadFile = async (file: File) => {
+    if (!selectedPetId) {
+      setError("Please select a pet first")
+      return
+    }
+    if (!vaccineName) {
+      setError("Please enter vaccine name")
+      return
+    }
+    if (!vaccinationDate) {
+      setError("Please select vaccination date")
+      return
+    }
+
     setUploading(true)
     setError(null)
     setUploadProgress(10)
@@ -53,34 +92,67 @@ export default function VaccinesPage() {
       const formData = new FormData()
       formData.append("file", file)
       formData.append("type", "vaccination")
+      formData.append("petId", selectedPetId)
 
       setUploadProgress(30)
 
-      const response = await fetch("/api/upload", {
+      const uploadResponse = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       })
 
       setUploadProgress(70)
 
-      if (!response.ok) {
-        const data = await response.json()
+      if (!uploadResponse.ok) {
+        const data = await uploadResponse.json()
         throw new Error(data.error || "Upload failed")
       }
 
-      const data = await response.json()
-      setUploadProgress(100)
+      const uploadData = await uploadResponse.json()
 
-      const newFile: UploadedFile = {
-        id: Date.now().toString(),
-        name: file.name,
-        url: data.url,
-        pathname: data.pathname,
-        contentType: data.contentType,
-        uploadedAt: new Date(),
+      // Save vaccination record to database
+      const saveResponse = await fetch("/api/vaccinations/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          petId: selectedPetId,
+          vaccineName,
+          vaccinationDate,
+          notes,
+          filePathname: uploadData.pathname,
+          fileUrl: uploadData.url,
+        }),
+      })
+
+      if (!saveResponse.ok) {
+        const data = await saveResponse.json()
+        throw new Error(data.error || "Failed to save vaccination record")
       }
 
-      setFiles(prev => [newFile, ...prev])
+      setUploadProgress(100)
+
+      const petName = pets.find(p => p.id === selectedPetId)?.name || "Unknown"
+      const newVaccination: UploadedVaccination = {
+        id: Date.now().toString(),
+        petName,
+        vaccineName,
+        vaccinationDate,
+        fileName: file.name,
+        uploadedAt: new Date(),
+        url: uploadData.url,
+        pathname: uploadData.pathname,
+      }
+
+      setVaccinations(prev => [newVaccination, ...prev])
+      
+      // Reset form
+      setVaccineName("")
+      setVaccinationDate("")
+      setNotes("")
+      
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed")
     } finally {
@@ -128,12 +200,12 @@ export default function VaccinesPage() {
     setIsDragging(false)
   }
 
-  const removeFile = (id: string) => {
-    setFiles(prev => prev.filter(f => f.id !== id))
+  const removeVaccination = (id: string) => {
+    setVaccinations(prev => prev.filter(v => v.id !== id))
   }
 
-  const getFileIcon = (contentType: string) => {
-    if (contentType === "application/pdf") {
+  const getFileIcon = (fileName: string) => {
+    if (fileName.toLowerCase().endsWith('.pdf')) {
       return <FileText className="w-5 h-5 text-red-500" />
     }
     return <Image className="w-5 h-5 text-blue-500" />
@@ -151,7 +223,7 @@ export default function VaccinesPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Vaccination Records</h1>
-            <p className="text-muted-foreground">Upload vaccination documents for your pets</p>
+            <p className="text-muted-foreground">Upload and track vaccination documents for your pets</p>
           </div>
         </div>
 
@@ -160,10 +232,75 @@ export default function VaccinesPage() {
           <CardHeader>
             <CardTitle>Upload Vaccination Document</CardTitle>
             <CardDescription>
-              Supported formats: JPG, PNG, WEBP, PDF (max 10MB)
+              Add vaccination documents with pet details and date
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Pet Selection */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Select Pet *
+              </label>
+              <select
+                value={selectedPetId}
+                onChange={(e) => setSelectedPetId(e.target.value)}
+                className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-lg"
+                disabled={uploading}
+              >
+                <option value="">Choose a pet...</option>
+                {pets.map(pet => (
+                  <option key={pet.id} value={pet.id}>
+                    {pet.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Vaccine Name */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Vaccine Name *
+              </label>
+              <Input
+                placeholder="e.g., Rabies, DHPP, COVID-19"
+                value={vaccineName}
+                onChange={(e) => setVaccineName(e.target.value)}
+                disabled={uploading}
+              />
+            </div>
+
+            {/* Vaccination Date */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Vaccination Date *
+              </label>
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="date"
+                  value={vaccinationDate}
+                  onChange={(e) => setVaccinationDate(e.target.value)}
+                  disabled={uploading}
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Notes (Optional)
+              </label>
+              <textarea
+                placeholder="e.g., Veterinarian name, batch number, next due date"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                disabled={uploading}
+                className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-lg resize-none"
+                rows={3}
+              />
+            </div>
+
             {/* Drop Zone */}
             <div
               onClick={() => fileInputRef.current?.click()}
@@ -218,12 +355,12 @@ export default function VaccinesPage() {
 
             {/* Error Message */}
             {error && (
-              <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2">
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2">
                 <X className="w-4 h-4 text-destructive" />
-                <span className="text-sm text-destructive">{error}</span>
+                <span className="text-sm text-destructive flex-1">{error}</span>
                 <button 
                   onClick={() => setError(null)}
-                  className="ml-auto p-1 hover:bg-destructive/20 rounded"
+                  className="p-1 hover:bg-destructive/20 rounded"
                 >
                   <X className="w-3 h-3 text-destructive" />
                 </button>
@@ -232,73 +369,59 @@ export default function VaccinesPage() {
           </CardContent>
         </Card>
 
-        {/* Uploaded Files */}
-        {files.length > 0 && (
+        {/* Uploaded Vaccinations */}
+        {vaccinations.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Uploaded Files</CardTitle>
+              <CardTitle>Saved Vaccinations</CardTitle>
               <CardDescription>
-                {files.length} file{files.length !== 1 ? "s" : ""} uploaded
+                {vaccinations.length} record{vaccinations.length !== 1 ? "s" : ""} saved
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {files.map(file => (
+                {vaccinations.map(vac => (
                   <div 
-                    key={file.id}
-                    className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg border border-border"
+                    key={vac.id}
+                    className="p-4 bg-secondary/30 rounded-lg border border-border space-y-2"
                   >
-                    {getFileIcon(file.contentType)}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-foreground truncate">
-                        {file.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(file.uploadedAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={file.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 hover:bg-secondary rounded-lg transition-colors"
-                      >
-                        <Check className="w-4 h-4 text-green-500" />
-                      </a>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3 flex-1">
+                        {getFileIcon(vac.fileName)}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground">
+                            {vac.vaccineName} - {vac.petName}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {vac.fileName}
+                          </p>
+                        </div>
+                      </div>
                       <button
-                        onClick={() => removeFile(file.id)}
+                        onClick={() => removeVaccination(vac.id)}
                         className="p-2 hover:bg-destructive/10 rounded-lg transition-colors"
                       >
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </button>
                     </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground pl-8">
+                      <span>Date: {new Date(vac.vaccinationDate).toLocaleDateString()}</span>
+                      <span>Uploaded: {vac.uploadedAt.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2 pl-8">
+                      <a
+                        href={vac.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                      >
+                        <Check className="w-4 h-4" />
+                        View Document
+                      </a>
+                    </div>
                   </div>
                 ))}
               </div>
-
-              {/* Copy URL Section */}
-              {files.length > 0 && (
-                <div className="mt-4 p-4 bg-secondary/50 rounded-lg">
-                  <p className="text-sm font-medium text-foreground mb-2">
-                    Latest Upload URL:
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                      readOnly 
-                      value={files[0].url} 
-                      className="text-xs font-mono"
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigator.clipboard.writeText(files[0].url)}
-                    >
-                      Copy
-                    </Button>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         )}
@@ -306,3 +429,4 @@ export default function VaccinesPage() {
     </div>
   )
 }
+

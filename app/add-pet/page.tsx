@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -65,14 +66,17 @@ export default function AddPetPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await fetch("/api/auth/user")
-        if (res.ok) {
-          setIsAuthenticated(true)
-        } else {
+        const supabase = createClient()
+        const { data: { user }, error } = await supabase.auth.getUser()
+        
+        if (error || !user) {
           setIsAuthenticated(false)
           router.push("/auth/login")
+        } else {
+          setIsAuthenticated(true)
         }
-      } catch {
+      } catch (err) {
+        console.error("[v0] Auth check error:", err)
         setIsAuthenticated(false)
         router.push("/auth/login")
       }

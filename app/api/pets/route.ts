@@ -48,8 +48,22 @@ export async function GET() {
       return NextResponse.json([])
     }
     
-    // Add empty vaccination_records to each pet (vaccination join not working)
-    const petsWithVaccinations = (pets || []).map(p => ({ ...p, vaccination_records: [] }))
+    // Fetch vaccination records for each pet separately since the join isn't working
+    const petsWithVaccinations = await Promise.all(
+      (pets || []).map(async (pet) => {
+        try {
+          const { data: vaccinations } = await supabase
+            .from("vaccination_records")
+            .select("*")
+            .eq("pet_id", pet.id)
+            .order("created_at", { ascending: false })
+          
+          return { ...pet, vaccination_records: vaccinations || [] }
+        } catch {
+          return { ...pet, vaccination_records: [] }
+        }
+      })
+    )
     
     return NextResponse.json(petsWithVaccinations)
   } catch (err) {

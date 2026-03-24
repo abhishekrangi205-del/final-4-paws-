@@ -34,6 +34,8 @@ export async function POST(request: NextRequest) {
     // Create folder path: pets/{userId}/{petId}/{type}/{filename}
     const folder = petId ? `pets/${user.id}/${petId}/${type}` : `pets/${user.id}/${type}`
     const filename = `${folder}/${Date.now()}-${file.name}`
+    
+    console.log("TOKEN:", process.env.BLOB_READ_WRITE_TOKEN)
 
     // Upload to Vercel Blob (public store)
     const blob = await put(filename, file, {

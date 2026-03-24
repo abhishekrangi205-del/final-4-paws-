@@ -123,8 +123,17 @@ export function PetProfileManager() {
               onEdit={() => setEditingPet(pet)}
               onDelete={async () => {
                 if (confirm(`Delete ${pet.name}?`)) {
-                  await fetch(`/api/pets/${pet.id}`, { method: "DELETE" })
-                  fetchPets()
+                  try {
+                    const res = await fetch(`/api/pets/${pet.id}`, { method: "DELETE" })
+                    if (res.ok) {
+                      fetchPets()
+                    } else {
+                      const errorData = await res.json()
+                      setError(errorData.error || "Failed to delete pet")
+                    }
+                  } catch (err) {
+                    setError("Failed to delete pet. Please try again.")
+                  }
                 }
               }}
               onAddVaccine={() => setShowAddVaccine(pet.id)}
@@ -229,10 +238,18 @@ function PetCard({
   
   const handleDeleteVaccine = async (vaccinationId: string) => {
     if (confirm("Delete this vaccination record?")) {
-      await fetch(`/api/pets/${pet.id}/vaccinations?vaccinationId=${vaccinationId}`, {
-        method: "DELETE",
-      })
-      onRefresh()
+      try {
+        const res = await fetch(`/api/pets/${pet.id}/vaccinations?vaccinationId=${vaccinationId}`, {
+          method: "DELETE",
+        })
+        if (res.ok) {
+          onRefresh()
+        } else {
+          console.error("Failed to delete vaccination:", await res.json())
+        }
+      } catch (err) {
+        console.error("Error deleting vaccination:", err)
+      }
     }
   }
   

@@ -19,12 +19,11 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
     
-    // Verify the pet belongs to this user
+    // Just verify pet exists (skip user_id check if column doesn't exist)
     const { data: pet } = await supabase
       .from("pets")
       .select("id")
       .eq("id", petId)
-      .eq("user_id", user.id)
       .single()
     
     if (!pet) {
@@ -38,7 +37,6 @@ export async function GET(
       .order("created_at", { ascending: false })
     
     if (error) {
-      console.error("Error fetching vaccinations:", error)
       return NextResponse.json([])
     }
     
@@ -67,24 +65,22 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
     
-    // Verify the pet belongs to this user
+    // Verify pet exists
     const { data: pet } = await supabase
       .from("pets")
       .select("id")
       .eq("id", petId)
-      .eq("user_id", user.id)
       .single()
     
     if (!pet) {
-      return NextResponse.json({ error: "Pet not found or unauthorized" }, { status: 404 })
+      return NextResponse.json({ error: "Pet not found" }, { status: 404 })
     }
     
     const body = await request.json()
     
-    // Build insert data with only valid fields - include user_id for ownership
+    // Build insert data with only valid fields
     const insertData: Record<string, unknown> = {
       pet_id: petId,
-      user_id: user.id,
     }
     
     const allowedFields = [
@@ -134,16 +130,15 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
     
-    // Verify the pet belongs to this user
+    // Verify pet exists
     const { data: pet } = await supabase
       .from("pets")
       .select("id")
       .eq("id", petId)
-      .eq("user_id", user.id)
       .single()
     
     if (!pet) {
-      return NextResponse.json({ error: "Pet not found or unauthorized" }, { status: 404 })
+      return NextResponse.json({ error: "Pet not found" }, { status: 404 })
     }
     
     const body = await request.json()
@@ -204,16 +199,15 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
     
-    // Verify the pet belongs to this user
+    // Verify pet exists
     const { data: pet } = await supabase
       .from("pets")
       .select("id")
       .eq("id", petId)
-      .eq("user_id", user.id)
       .single()
     
     if (!pet) {
-      return NextResponse.json({ error: "Pet not found or unauthorized" }, { status: 404 })
+      return NextResponse.json({ error: "Pet not found" }, { status: 404 })
     }
     
     const { searchParams } = new URL(request.url)

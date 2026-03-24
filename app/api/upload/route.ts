@@ -85,21 +85,20 @@ export async function POST(request: NextRequest) {
     
     console.log("[v0] Upload path:", filename)
 
-    console.log("[v0] Uploading to Vercel Blob...")
+    console.log("[v0] Uploading to Vercel Blob (private store)...")
     const blob = await put(filename, file, {
-      access: "public",
+      access: "private",
       token: token,
     })
 
     console.log("[v0] Upload successful!")
-    console.log("[v0] Blob URL:", blob.url)
     console.log("[v0] Blob pathname:", blob.pathname)
     console.log("[v0] === UPLOAD API COMPLETE ===")
 
-    // Return URL for public blob access
+    // Return pathname for private blob - use /api/file?pathname= to access
     return NextResponse.json({ 
-      url: blob.url,
       pathname: blob.pathname,
+      url: `/api/file?pathname=${encodeURIComponent(blob.pathname)}`,
       contentType: file.type,
     })
   } catch (error) {

@@ -56,14 +56,14 @@ export async function POST(request: NextRequest) {
     const fileName = `vaccines/${Date.now()}-${sanitizedFileName}`
 
     const blob = await put(fileName, file, {
-      access: 'public',
+      access: 'private',
       token: process.env.BLOB_READ_WRITE_TOKEN,
     })
 
-    // Return direct public URL
+    // Return pathname for private blob
     return NextResponse.json({
       pathname: blob.pathname,
-      url: blob.url,
+      url: `/api/file?pathname=${encodeURIComponent(blob.pathname)}`,
     })
   } catch (error) {
     console.error('Upload error:', error)

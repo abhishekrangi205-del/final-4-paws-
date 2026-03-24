@@ -78,9 +78,9 @@ export function DesktopNav() {
                 asChild
                 className="text-muted-foreground hover:text-foreground"
               >
-                <Link href="/account">
+                <Link href="/profile/my-pets">
                   <Dog className="w-4 h-4 mr-2" />
-                  My Pets
+                  View My Pets
                 </Link>
               </Button>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">

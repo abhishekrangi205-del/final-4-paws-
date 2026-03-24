@@ -5,11 +5,10 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { PawPrint, LogOut, ArrowLeft, Mail, User, Dog, Calendar, ChevronRight, Loader2, Shield, Eye } from "lucide-react"
-import { PetProfileManager } from "@/components/pet-profile"
+import { PawPrint, LogOut, ArrowLeft, Mail, User, Dog, Calendar, ChevronRight, Loader2, Shield } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
-type Tab = "profile" | "pets" | "bookings"
+type Tab = "profile" | "bookings"
 
 export default function AccountPage() {
   const [user, setUser] = useState<SupabaseUser | null>(null)
@@ -150,17 +149,7 @@ export default function AccountPage() {
             <User className="w-4 h-4 inline-block mr-2" />
             Profile
           </button>
-          <button
-            onClick={() => setActiveTab("pets")}
-            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "pets" 
-                ? "border-primary text-primary" 
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Dog className="w-4 h-4 inline-block mr-2" />
-            My Pets
-          </button>
+
           <button
             onClick={() => setActiveTab("bookings")}
             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
@@ -212,23 +201,12 @@ export default function AccountPage() {
             
             {/* Quick Actions */}
             <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <button
-                onClick={() => setActiveTab("pets")}
-                className="w-full p-4 flex items-center justify-between hover:bg-secondary/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Dog className="w-5 h-5 text-primary" />
-                  <span className="font-medium">Manage Pet Profiles</span>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </button>
-              <div className="border-t border-border" />
               <Link
                 href="/profile/my-pets"
                 className="w-full p-4 flex items-center justify-between hover:bg-secondary/50 transition-colors block"
               >
                 <div className="flex items-center gap-3">
-                  <Eye className="w-5 h-5 text-primary" />
+                  <Dog className="w-5 h-5 text-primary" />
                   <span className="font-medium">View My Pets</span>
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
@@ -263,19 +241,6 @@ export default function AccountPage() {
                 Back to Home
               </Link>
             </Button>
-          </div>
-        )}
-        
-        {/* Pets Tab */}
-        {activeTab === "pets" && (
-          <div>
-            <div className="mb-6">
-              <h2 className="text-2xl font-serif font-bold text-foreground">My Pets</h2>
-              <p className="text-muted-foreground">
-                Manage your pet profiles and vaccination records
-              </p>
-            </div>
-            <PetProfileManager />
           </div>
         )}
         

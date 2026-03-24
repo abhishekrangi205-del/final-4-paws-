@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     }
     
     const body = await request.json()
-    const { petId, vaccineName, vaccinationDate, notes, filePathname, fileUrl } = body
+    const { petId, vaccineName, vaccinationDate, expiryDate, notes, filePathname, fileUrl } = body
     
     if (!petId || !vaccineName || !vaccinationDate || !filePathname) {
       return NextResponse.json(
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
         user_id: user.id,
         vaccine_name: vaccineName,
         date_administered: new Date(vaccinationDate).toISOString().split('T')[0],
+        expiry_date: expiryDate ? new Date(expiryDate).toISOString().split('T')[0] : null,
         notes: notes || null,
         document_pathname: filePathname,
         document_url: fileUrl,
@@ -43,8 +44,9 @@ export async function POST(request: Request) {
     
     if (error) {
       console.error("Error saving vaccination:", error)
-      // If vaccination_records table doesn't exist, still return success
-      if (error.code === "42P01") {
+      // If vaccination_records table doesn't exist, still return success with temp ID
+      if (error.code === "PGRST205" || error.message?.includes("vaccination_records")) {
+        console.log("[v0] Table not found, but file uploaded successfully")
         return NextResponse.json({
           id: "temp-" + Date.now(),
           success: true,

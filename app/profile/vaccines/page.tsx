@@ -17,6 +17,7 @@ type UploadedVaccination = {
   petName: string
   vaccineName: string
   vaccinationDate: string
+  expiryDate?: string
   fileName: string
   uploadedAt: Date
   url: string
@@ -28,6 +29,7 @@ export default function VaccinesPage() {
   const [selectedPetId, setSelectedPetId] = useState("")
   const [vaccineName, setVaccineName] = useState("")
   const [vaccinationDate, setVaccinationDate] = useState("")
+  const [expiryDate, setExpiryDate] = useState("")
   const [notes, setNotes] = useState("")
   const [vaccinations, setVaccinations] = useState<UploadedVaccination[]>([])
   const [uploading, setUploading] = useState(false)
@@ -118,6 +120,7 @@ export default function VaccinesPage() {
           petId: selectedPetId,
           vaccineName,
           vaccinationDate,
+          expiryDate,
           notes,
           filePathname: uploadData.pathname,
           fileUrl: uploadData.url,
@@ -137,6 +140,7 @@ export default function VaccinesPage() {
         petName,
         vaccineName,
         vaccinationDate,
+        expiryDate,
         fileName: file.name,
         uploadedAt: new Date(),
         url: uploadData.url,
@@ -148,6 +152,7 @@ export default function VaccinesPage() {
       // Reset form
       setVaccineName("")
       setVaccinationDate("")
+      setExpiryDate("")
       setNotes("")
       
       if (fileInputRef.current) {
@@ -286,6 +291,23 @@ export default function VaccinesPage() {
               </div>
             </div>
 
+            {/* Expiry Date */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Expiry Date (Optional)
+              </label>
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="date"
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                  disabled={uploading}
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
             {/* Notes */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
@@ -406,6 +428,9 @@ export default function VaccinesPage() {
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground pl-8">
                       <span>Date: {new Date(vac.vaccinationDate).toLocaleDateString()}</span>
+                      {vac.expiryDate && (
+                        <span>Expires: {new Date(vac.expiryDate).toLocaleDateString()}</span>
+                      )}
                       <span>Uploaded: {vac.uploadedAt.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center gap-2 pl-8">

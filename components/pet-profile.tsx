@@ -388,12 +388,13 @@ function PetCard({
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      {vax.document_pathname && (
+                      {vax.document_url && (
                         <a 
-                          href={`/api/file?pathname=${encodeURIComponent(vax.document_pathname)}`}
+                          href={vax.document_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="p-1.5 hover:bg-secondary rounded"
+                          title="View vaccination document"
                         >
                           <FileText className="w-4 h-4 text-primary" />
                         </a>
@@ -452,6 +453,7 @@ function EditVaccinationModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [documentUploading, setDocumentUploading] = useState(false)
   const [documentPathname, setDocumentPathname] = useState<string | null>(vaccination.document_pathname)
+  const [documentUrl, setDocumentUrl] = useState<string | null>(vaccination.document_url)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -471,8 +473,9 @@ function EditVaccinationModal({
       })
       
       if (res.ok) {
-        const { pathname } = await res.json()
+        const { pathname, url } = await res.json()
         setDocumentPathname(pathname)
+        setDocumentUrl(url)
       }
     } catch (err) {
       console.error("Upload failed:", err)
@@ -491,6 +494,7 @@ function EditVaccinationModal({
       expiry_date: formData.expiry_date || null,
       notes: formData.notes || null,
       document_pathname: documentPathname,
+      document_url: documentUrl,
     })
     
     setIsSubmitting(false)

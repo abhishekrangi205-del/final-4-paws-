@@ -37,10 +37,10 @@ export async function GET() {
     console.log('[v0]   - Email:', user.email ? `${user.email.substring(0, 3)}...@...` : 'N/A')
     console.log('[v0]   - Created:', user.created_at)
     
-    // Try to fetch user's pets by user_id first
+    // Try to fetch user's pets with vaccination_records joined
     let { data: pets, error } = await supabase
       .from("pets")
-      .select("*")
+      .select("*, vaccination_records(*)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
     
@@ -48,11 +48,22 @@ export async function GET() {
     if (error && (error.code === "PGRST204" || error.code === "42703" || error.message?.includes("user_id") || error.message?.includes("does not exist"))) {
       const fallback = await supabase
         .from("pets")
-        .select("*")
+        .select("*, vaccination_records(*)")
         .order("created_at", { ascending: false })
       
       pets = fallback.data
       error = fallback.error
+    }
+
+    // If vaccination_records join fails, fetch pets without it
+    if (error) {
+      const basic = await supabase
+        .from("pets")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+      pets = (basic.data || []).map(p => ({ ...p, vaccination_records: [] }))
+      error = basic.error
     }
     
     if (error) {

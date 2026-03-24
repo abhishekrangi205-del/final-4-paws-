@@ -23,7 +23,7 @@ type VaccinationRecord = {
   id: string
   vaccine_name: string
   date_administered: string
-  expiration_date: string | null
+  expiry_date: string | null
   document_url: string | null
   document_pathname: string | null
   notes: string | null
@@ -381,7 +381,7 @@ function PetCard({
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Given: {new Date(vax.date_administered).toLocaleDateString()}
-                        {vax.expiration_date && ` • Expires: ${new Date(vax.expiration_date).toLocaleDateString()}`}
+                        {vax.expiry_date && ` • Expires: ${new Date(vax.expiry_date).toLocaleDateString()}`}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -443,7 +443,7 @@ function EditVaccinationModal({
   const [formData, setFormData] = useState({
     vaccine_name: vaccination.vaccine_name,
     date_administered: vaccination.date_administered,
-    expiration_date: vaccination.expiration_date || "",
+    expiry_date: vaccination.expiry_date || "",
     notes: vaccination.notes || "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -485,7 +485,7 @@ function EditVaccinationModal({
     onSave({
       vaccine_name: formData.vaccine_name,
       date_administered: formData.date_administered,
-      expiration_date: formData.expiration_date || null,
+      expiry_date: formData.expiry_date || null,
       notes: formData.notes || null,
       document_pathname: documentPathname,
     })
@@ -545,8 +545,8 @@ function EditVaccinationModal({
               <label className="block text-sm font-medium mb-1">Expiration Date</label>
               <Input
                 type="date"
-                value={formData.expiration_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, expiration_date: e.target.value }))}
+                value={formData.expiry_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, expiry_date: e.target.value }))}
               />
             </div>
           </div>
@@ -632,7 +632,7 @@ function EditVaccinationModal({
 type VaccinationInput = {
   vaccine_name: string
   date_administered: string
-  expiration_date: string | null
+  expiry_date: string | null
   notes: string | null
   document_pathname: string | null
 }
@@ -946,7 +946,7 @@ function PetForm({
                         <span className="font-medium text-sm">{vax.vaccine_name}</span>
                         <p className="text-xs text-muted-foreground">
                           Given: {new Date(vax.date_administered).toLocaleDateString()}
-                          {vax.expiration_date && ` • Expires: ${new Date(vax.expiration_date).toLocaleDateString()}`}
+                          {vax.expiry_date && ` • Expires: ${new Date(vax.expiry_date).toLocaleDateString()}`}
                         </p>
                       </div>
                       <button
@@ -1002,7 +1002,7 @@ function InlineVaccinationForm({
   const [formData, setFormData] = useState({
     vaccine_name: "",
     date_administered: "",
-    expiration_date: "",
+    expiry_date: "",
     notes: "",
   })
   const [customVaccine, setCustomVaccine] = useState("")
@@ -1073,7 +1073,7 @@ function InlineVaccinationForm({
     onAdd({
       vaccine_name: formData.vaccine_name === "other" ? customVaccine : formData.vaccine_name,
       date_administered: formData.date_administered,
-      expiration_date: formData.expiration_date || null,
+      expiry_date: formData.expiry_date || null,
       notes: formData.notes || null,
       document_pathname: documentPathname,
     })
@@ -1129,8 +1129,8 @@ function InlineVaccinationForm({
           <Input
             type="date"
             className="text-sm"
-            value={formData.expiration_date}
-            onChange={(e) => setFormData(prev => ({ ...prev, expiration_date: e.target.value }))}
+            value={formData.expiry_date}
+            onChange={(e) => setFormData(prev => ({ ...prev, expiry_date: e.target.value }))}
           />
         </div>
       </div>
@@ -1227,7 +1227,7 @@ function VaccinationForm({
   const [formData, setFormData] = useState({
     vaccine_name: "",
     date_administered: "",
-    expiration_date: "",
+    expiry_date: "",
     notes: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -1286,7 +1286,7 @@ function VaccinationForm({
       body: JSON.stringify({
         vaccine_name: formData.vaccine_name,
         date_administered: formData.date_administered,
-        expiration_date: formData.expiration_date || null,
+        expiry_date: formData.expiry_date || null,
         notes: formData.notes || null,
         document_pathname: documentPathname,
       }),
@@ -1349,8 +1349,8 @@ function VaccinationForm({
               <label className="block text-sm font-medium mb-1">Expiration Date</label>
               <Input
                 type="date"
-                value={formData.expiration_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, expiration_date: e.target.value }))}
+                value={formData.expiry_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, expiry_date: e.target.value }))}
               />
             </div>
           </div>

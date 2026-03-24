@@ -65,7 +65,6 @@ export function PetProfileManager() {
   const [isLoading, setIsLoading] = useState(true)
   const [showAddPet, setShowAddPet] = useState(false)
   const [editingPet, setEditingPet] = useState<Pet | null>(null)
-  const [showAddVaccine, setShowAddVaccine] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   
   const fetchPets = useCallback(async () => {
@@ -136,7 +135,6 @@ export function PetProfileManager() {
                   }
                 }
               }}
-              onAddVaccine={() => setShowAddVaccine(pet.id)}
               onRefresh={fetchPets}
             />
           ))}
@@ -205,17 +203,7 @@ export function PetProfileManager() {
         />
       )}
       
-      {/* Add Vaccine Modal */}
-      {showAddVaccine && (
-        <VaccinationForm
-          petId={showAddVaccine}
-          onSave={() => {
-            setShowAddVaccine(null)
-            fetchPets()
-          }}
-          onCancel={() => setShowAddVaccine(null)}
-        />
-      )}
+
     </div>
   )
 }
@@ -224,13 +212,11 @@ function PetCard({
   pet, 
   onEdit, 
   onDelete, 
-  onAddVaccine,
   onRefresh 
 }: { 
   pet: Pet
   onEdit: () => void
   onDelete: () => void
-  onAddVaccine: () => void
   onRefresh: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
@@ -365,15 +351,11 @@ function PetCard({
           
           {/* Vaccination Records */}
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center mb-3">
               <h4 className="font-medium text-foreground flex items-center gap-2">
                 <Shield className="w-4 h-4 text-primary" />
                 Vaccination Records
               </h4>
-              <Button size="sm" variant="outline" onClick={onAddVaccine}>
-                <Plus className="w-4 h-4 mr-1" />
-                Add
-              </Button>
             </div>
             
             {pet.vaccination_records?.length === 0 ? (

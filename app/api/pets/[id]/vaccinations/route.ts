@@ -13,6 +13,24 @@ export async function GET(
       return NextResponse.json([])
     }
     
+    // Verify user is authenticated
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
+    // Verify the pet belongs to this user
+    const { data: pet } = await supabase
+      .from("pets")
+      .select("id")
+      .eq("id", petId)
+      .eq("user_id", user.id)
+      .single()
+    
+    if (!pet) {
+      return NextResponse.json({ error: "Pet not found" }, { status: 404 })
+    }
+    
     const { data: vaccinations, error } = await supabase
       .from("vaccination_records")
       .select("*")
@@ -43,11 +61,30 @@ export async function POST(
       return NextResponse.json({ error: "Database not configured" }, { status: 503 })
     }
     
+    // Verify user is authenticated
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
+    // Verify the pet belongs to this user
+    const { data: pet } = await supabase
+      .from("pets")
+      .select("id")
+      .eq("id", petId)
+      .eq("user_id", user.id)
+      .single()
+    
+    if (!pet) {
+      return NextResponse.json({ error: "Pet not found or unauthorized" }, { status: 404 })
+    }
+    
     const body = await request.json()
     
-    // Build insert data with only valid fields
+    // Build insert data with only valid fields - include user_id for ownership
     const insertData: Record<string, unknown> = {
       pet_id: petId,
+      user_id: user.id,
     }
     
     const allowedFields = [
@@ -89,6 +126,24 @@ export async function PATCH(
     
     if (!supabase) {
       return NextResponse.json({ error: "Database not configured" }, { status: 503 })
+    }
+    
+    // Verify user is authenticated
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
+    // Verify the pet belongs to this user
+    const { data: pet } = await supabase
+      .from("pets")
+      .select("id")
+      .eq("id", petId)
+      .eq("user_id", user.id)
+      .single()
+    
+    if (!pet) {
+      return NextResponse.json({ error: "Pet not found or unauthorized" }, { status: 404 })
     }
     
     const body = await request.json()
@@ -141,6 +196,24 @@ export async function DELETE(
     
     if (!supabase) {
       return NextResponse.json({ error: "Database not configured" }, { status: 503 })
+    }
+    
+    // Verify user is authenticated
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
+    // Verify the pet belongs to this user
+    const { data: pet } = await supabase
+      .from("pets")
+      .select("id")
+      .eq("id", petId)
+      .eq("user_id", user.id)
+      .single()
+    
+    if (!pet) {
+      return NextResponse.json({ error: "Pet not found or unauthorized" }, { status: 404 })
     }
     
     const { searchParams } = new URL(request.url)

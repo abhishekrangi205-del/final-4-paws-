@@ -37,11 +37,12 @@ export async function GET() {
     console.log('[v0]   - Email:', user.email ? `${user.email.substring(0, 3)}...@...` : 'N/A')
     console.log('[v0]   - Created:', user.created_at)
     
-    // Fetch pets - just get all data from pets table
-    console.log('[v0] Fetching pets from database...')
+    // Fetch only this user's pets - filter by user_id
+    console.log('[v0] Fetching pets for user:', maskId(user.id))
     const { data: pets, error } = await supabase
       .from("pets")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false })
     
     if (error) {
@@ -90,9 +91,10 @@ export async function POST(request: Request) {
     console.log('[v0]   - Breed:', body.breed || 'N/A')
     console.log('[v0]   - Size:', body.size || 'N/A')
     
-    // Start with basic fields that should always exist
+    // Start with basic fields - always include user_id to link pet to user
     const insertData: Record<string, unknown> = {
       name: body.name,
+      user_id: user.id,
     }
     
     // Add optional fields if they're provided

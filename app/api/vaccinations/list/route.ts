@@ -13,6 +13,12 @@ export async function GET(request: NextRequest) {
 
     const petIdParam = request.nextUrl.searchParams.get("petId")
 
+    // Check if Blob token is available
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      // Return empty array if Blob is not configured
+      return NextResponse.json([])
+    }
+
     // Build the prefix for listing files
     let prefix = `vaccinations/${user.id}`
     if (petIdParam) {
@@ -48,6 +54,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(vaccinations)
   } catch (error) {
     console.error("[v0] Error listing vaccinations:", error)
-    return NextResponse.json({ error: "Failed to list vaccinations" }, { status: 500 })
+    // Return empty array on error instead of 500 to prevent page crashes
+    return NextResponse.json([])
   }
 }

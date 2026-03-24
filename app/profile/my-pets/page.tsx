@@ -8,13 +8,12 @@ import Link from "next/link"
 
 type Vaccination = {
   id: string
-  vaccine_name: string
-  date_administered: string
-  expiry_date?: string
-  notes?: string
-  document_pathname: string
-  document_url: string
-  verified: boolean
+  pathname: string
+  url: string
+  fileName: string
+  petId: string
+  uploadedAt: string
+  size: number
 }
 
 type Pet = {
@@ -53,11 +52,15 @@ export default function MyPetsPage() {
                 if (vaccResponse.ok) {
                   const vaccinations = await vaccResponse.json()
                   return { ...pet, vaccinations: Array.isArray(vaccinations) ? vaccinations : [] }
+                } else {
+                  // If the API returns an error (like Blob token not configured), just skip vaccinations
+                  return { ...pet, vaccinations: [] }
                 }
               } catch (err) {
+                // Silently fail and return pet without vaccinations
                 console.error(`Failed to fetch vaccinations for pet ${pet.id}:`, err)
+                return { ...pet, vaccinations: [] }
               }
-              return { ...pet, vaccinations: [] }
             })
           )
           
@@ -71,11 +74,6 @@ export default function MyPetsPage() {
     }
     fetchPets()
   }, [])
-
-  const isVaccineExpired = (expiryDate?: string) => {
-    if (!expiryDate) return false
-    return new Date(expiryDate) < new Date()
-  }
 
   const handleDeletePet = async (petId: string, petName: string) => {
     if (confirm(`Delete ${petName}?`)) {
@@ -92,12 +90,6 @@ export default function MyPetsPage() {
         setError("Failed to delete pet. Please try again.")
       }
     }
-  }
-
-  const getVaccineStatus = (vaccine: Vaccination) => {
-    if (!vaccine.expiry_date) return "recorded"
-    if (isVaccineExpired(vaccine.expiry_date)) return "expired"
-    return "active"
   }
 
   if (loading) {
@@ -280,9 +272,11 @@ export default function MyPetsPage() {
                                     <FileText className="w-4 h-4 text-muted-foreground" />
                                     <p className="font-medium text-foreground">{vaccine.fileName}</p>
                                   </div>
-                                  <p className="text-sm text-muted-foreground mt-1">{vaccine.fileName}</p>
                                   <p className="text-xs text-muted-foreground mt-1">
                                     Uploaded: {new Date(vaccine.uploadedAt).toLocaleDateString()}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Size: {(vaccine.size / 1024).toFixed(1)} KB
                                   </p>
                                 </div>
                                 <a

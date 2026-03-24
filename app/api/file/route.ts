@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     // Get private blob with authentication
     const result = await get(pathname, {
       access: 'private',
+      token: process.env.BLOB_READ_WRITE_TOKEN,
       ifNoneMatch: request.headers.get('if-none-match') ?? undefined,
     })
 

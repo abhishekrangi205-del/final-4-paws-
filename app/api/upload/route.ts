@@ -55,14 +55,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 })
     }
 
-    // Determine which token to use - prefer manual token if set
-    const manualToken = process.env.BLOB_READ_WRITE_TOKEN_MANUAL
+    // Use the default BLOB_READ_WRITE_TOKEN from Vercel Blob integration
     const defaultToken = process.env.BLOB_READ_WRITE_TOKEN
-    const token = manualToken || defaultToken
+    const token = defaultToken
 
-    console.log("[v0] BLOB_READ_WRITE_TOKEN_MANUAL:", maskToken(manualToken))
     console.log("[v0] BLOB_READ_WRITE_TOKEN:", maskToken(defaultToken))
-    console.log("[v0] Using token:", manualToken ? "MANUAL" : "DEFAULT")
+    console.log("[v0] Using token:", defaultToken ? "DEFAULT" : "NOT_SET")
 
     if (!token) {
       console.log("[v0] ERROR: No blob token configured")

@@ -1,33 +1,43 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { type NextRequest, NextResponse } from 'next/server'
+import { get } from '@vercel/blob'
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   try {
-    // Support both url and pathname params for backwards compatibility
-    const url = request.nextUrl.searchParams.get("url")
-    const pathname = request.nextUrl.searchParams.get("pathname")
+    const pathname = request.nextUrl.searchParams.get('pathname')
 
-    if (!url && !pathname) {
-      return NextResponse.json({ error: "Missing url or pathname" }, { status: 400 })
+    if (!pathname) {
+      return NextResponse.json({ error: 'Missing pathname' }, { status: 400 })
     }
 
-    // For public blobs, redirect to the blob URL directly
-    // This allows authentication check while serving public files
-    if (url) {
-      return NextResponse.redirect(url)
+    const result = await get(pathname, {
+      access: 'private',
+      ifNoneMatch: request.headers.get('if-none-match') ?? undefined,
+    })
+
+    if (!result) {
+      return new NextResponse('Not found', { status: 404 })
     }
 
-    // If only pathname provided, construct URL or return error
-    return NextResponse.json({ error: "Please provide the full blob URL" }, { status: 400 })
+    // Blob hasn't changed — tell the browser to use its cached copy
+    if (result.statusCode === 304) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          ETag: result.blob.etag,
+          'Cache-Control': 'private, no-cache',
+        },
+      })
+    }
+
+    return new NextResponse(result.stream, {
+      headers: {
+        'Content-Type': result.blob.contentType,
+        ETag: result.blob.etag,
+        'Cache-Control': 'private, no-cache',
+      },
+    })
   } catch (error) {
-    console.error("Error serving file:", error)
-    return NextResponse.json({ error: "Failed to serve file" }, { status: 500 })
+    console.error('Error serving file:', error)
+    return NextResponse.json({ error: 'Failed to serve file' }, { status: 500 })
   }
 }

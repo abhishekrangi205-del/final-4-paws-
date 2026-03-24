@@ -26,15 +26,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File size must be less than 10MB' }, { status: 400 })
     }
 
-    const sanitizedFileName = file.name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '')
+    const sanitizedFileName = file.name
+      .replace(/\s+/g, '-')
+      .replace(/[^a-zA-Z0-9.-]/g, '')
+
     const fileName = `vaccines/${Date.now()}-${sanitizedFileName}`
 
-    // access must be 'private' for private stores
     const blob = await put(fileName, file, {
       access: 'private',
+      token: process.env.BLOB_READ_WRITE_TOKEN, // ✅ FIX HERE
     })
 
-    // Return pathname for private blobs - use /api/file?pathname= to access
     return NextResponse.json({
       pathname: blob.pathname,
       url: `/api/file?pathname=${encodeURIComponent(blob.pathname)}`,

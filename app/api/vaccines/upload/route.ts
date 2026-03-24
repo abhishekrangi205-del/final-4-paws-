@@ -1,8 +1,31 @@
 import { put } from '@vercel/blob'
 import { type NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ Initialize Supabase (SERVER SIDE)
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get: (name) => cookies().get(name)?.value,
+        },
+      }
+    )
+
+    // ✅ Check user
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // 👉 Your existing logic
     const formData = await request.formData()
     const file = formData.get('file') as File
 
@@ -17,7 +40,7 @@ export async function POST(request: NextRequest) {
       'image/gif',
       'image/webp',
     ]
-    
+
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json({ error: 'Only PDF and image files are allowed' }, { status: 400 })
     }
@@ -34,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     const blob = await put(fileName, file, {
       access: 'private',
-      token: process.env.BLOB_READ_WRITE_TOKEN, // ✅ FIX HERE
+      token: process.env.BLOB_READ_WRITE_TOKEN,
     })
 
     return NextResponse.json({

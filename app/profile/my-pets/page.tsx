@@ -52,11 +52,15 @@ export default function MyPetsPage() {
                 if (vaccResponse.ok) {
                   const vaccinations = await vaccResponse.json()
                   return { ...pet, vaccinations: Array.isArray(vaccinations) ? vaccinations : [] }
+                } else {
+                  // If the API returns an error (like Blob token not configured), just skip vaccinations
+                  return { ...pet, vaccinations: [] }
                 }
               } catch (err) {
+                // Silently fail and return pet without vaccinations
                 console.error(`Failed to fetch vaccinations for pet ${pet.id}:`, err)
+                return { ...pet, vaccinations: [] }
               }
-              return { ...pet, vaccinations: [] }
             })
           )
           

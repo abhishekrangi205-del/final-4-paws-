@@ -6,9 +6,10 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { PawPrint, LogOut, ArrowLeft, Mail, User, Dog, Calendar, ChevronRight, Loader2, Shield } from "lucide-react"
+import { PetProfileManager } from "@/components/pet-profile"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
-type Tab = "profile" | "bookings"
+type Tab = "profile" | "pets" | "bookings"
 
 export default function AccountPage() {
   const [user, setUser] = useState<SupabaseUser | null>(null)
@@ -151,6 +152,18 @@ export default function AccountPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab("pets")}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "pets"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Dog className="w-4 h-4 inline-block mr-2" />
+            My Pets
+          </button>
+
+          <button
             onClick={() => setActiveTab("bookings")}
             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "bookings" 
@@ -201,16 +214,16 @@ export default function AccountPage() {
             
             {/* Quick Actions */}
             <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <Link
-                href="/profile/my-pets"
-                className="w-full p-4 flex items-center justify-between hover:bg-secondary/50 transition-colors block"
+              <button
+                onClick={() => setActiveTab("pets")}
+                className="w-full p-4 flex items-center justify-between hover:bg-secondary/50 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <Dog className="w-5 h-5 text-primary" />
-                  <span className="font-medium">View My Pets</span>
+                  <span className="font-medium">My Pets</span>
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </Link>
+              </button>
               <div className="border-t border-border" />
               <Link
                 href="/profile/vaccines"
@@ -244,6 +257,17 @@ export default function AccountPage() {
           </div>
         )}
         
+        {/* Pets Tab */}
+        {activeTab === "pets" && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl font-serif font-bold text-foreground">My Pets</h2>
+              <p className="text-muted-foreground">Add, edit and manage your pet profiles</p>
+            </div>
+            <PetProfileManager />
+          </div>
+        )}
+
         {/* Bookings Tab */}
         {activeTab === "bookings" && (
           <BookingsTab userId={user.id} />

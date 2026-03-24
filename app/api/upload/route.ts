@@ -35,11 +35,11 @@ export async function POST(request: NextRequest) {
     const folder = petId ? `pets/${user.id}/${petId}/${type}` : `pets/${user.id}/${type}`
     const filename = `${folder}/${Date.now()}-${file.name}`
     
-    console.log("TOKEN:", process.env.BLOB_READ_WRITE_TOKEN)
+    console.log("Using manual token:", process.env.BLOB_READ_WRITE_TOKEN_MANUAL)
 
-    // Upload to Vercel Blob (public store)
-    const blob = await put(filename, file, {
+const blob = await put(filename, file, {
   access: "public",
+  token: process.env.BLOB_READ_WRITE_TOKEN_MANUAL,  // ← ADD THIS
 })
 
     // Return URL for public blob access

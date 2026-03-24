@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { PawPrint, LogOut, ArrowLeft, Mail, User, Dog, Calendar, ChevronRight, Loader2 } from "lucide-react"
+import { PawPrint, LogOut, ArrowLeft, Mail, User, Dog, Calendar, ChevronRight, Loader2, Shield } from "lucide-react"
 import { PetProfileManager } from "@/components/pet-profile"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -222,6 +222,17 @@ export default function AccountPage() {
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </button>
+              <div className="border-t border-border" />
+              <Link
+                href="/profile/vaccines"
+                className="w-full p-4 flex items-center justify-between hover:bg-secondary/50 transition-colors block"
+              >
+                <div className="flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-primary" />
+                  <span className="font-medium">Upload Vaccination Records</span>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </Link>
               <div className="border-t border-border" />
               <Link
                 href="/#book"

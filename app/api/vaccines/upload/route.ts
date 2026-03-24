@@ -29,15 +29,15 @@ export async function POST(request: NextRequest) {
     const sanitizedFileName = file.name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '')
     const fileName = `vaccines/${Date.now()}-${sanitizedFileName}`
 
-    // access must match the store type (public for public stores)
+    // access must be 'private' for private stores
     const blob = await put(fileName, file, {
-      access: 'public',
+      access: 'private',
     })
 
-    // Return both pathname and url for public blobs
+    // Return pathname for private blobs - use /api/file?pathname= to access
     return NextResponse.json({
       pathname: blob.pathname,
-      url: blob.url,
+      url: `/api/file?pathname=${encodeURIComponent(blob.pathname)}`,
     })
   } catch (error) {
     console.error('Upload error:', error)

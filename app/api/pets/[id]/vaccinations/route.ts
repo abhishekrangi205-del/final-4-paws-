@@ -84,7 +84,7 @@ export async function POST(
     }
     
     const allowedFields = [
-      'vaccine_name', 'date_administered', 'expiration_date',
+      'vaccine_name', 'date_administered', 'expiry_date',
       'document_pathname', 'notes'
     ]
     
@@ -150,7 +150,7 @@ export async function PATCH(
     
     // Build update data with only valid fields
     const allowedFields = [
-      'vaccine_name', 'date_administered', 'expiration_date',
+      'vaccine_name', 'date_administered', 'expiry_date',
       'document_pathname', 'notes'
     ]
     

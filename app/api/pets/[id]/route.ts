@@ -94,6 +94,18 @@ export async function DELETE(
       return NextResponse.json({ error: "Database not configured" }, { status: 503 })
     }
     
+    // Verify user is authenticated
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    
+    // First delete any associated vaccination records (cascade should handle this, but be safe)
+    await supabase
+      .from("vaccination_records")
+      .delete()
+      .eq("pet_id", id)
+    
     const { error } = await supabase
       .from("pets")
       .delete()

@@ -37,9 +37,8 @@ export async function POST(request: NextRequest) {
 
     // Upload to Vercel Blob (public store)
     const blob = await put(filename, file, {
-      access: "public",
-      token: process.env.BLOB_READ_WRITE_TOKEN,
-    })
+  access: "public",
+})
 
     // Return URL for public blob access
     return NextResponse.json({ 

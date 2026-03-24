@@ -4,12 +4,18 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Upload, FileText, Image, Loader2, Check, X, Trash2, Calendar } from "lucide-react"
+import { ArrowLeft, Upload, FileText, Image, Loader2, Check, X, Trash2, Calendar, Save } from "lucide-react"
 import Link from "next/link"
 
 type Pet = {
   id: string
   name: string
+}
+
+type PendingFile = {
+  file: File
+  pathname: string
+  url: string
 }
 
 type UploadedVaccination = {
@@ -33,9 +39,12 @@ export default function VaccinesPage() {
   const [notes, setNotes] = useState("")
   const [vaccinations, setVaccinations] = useState<UploadedVaccination[]>([])
   const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [pendingFile, setPendingFile] = useState<PendingFile | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const allowedTypes = [
@@ -72,9 +81,62 @@ export default function VaccinesPage() {
     return null
   }
 
+  // Step 1: Upload file only (doesn't save to database yet)
   const uploadFile = async (file: File) => {
+    setUploading(true)
+    setError(null)
+    setSuccess(null)
+    setUploadProgress(10)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("type", "vaccination")
+      if (selectedPetId) {
+        formData.append("petId", selectedPetId)
+      }
+
+      setUploadProgress(50)
+
+      const uploadResponse = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      setUploadProgress(90)
+
+      if (!uploadResponse.ok) {
+        const data = await uploadResponse.json()
+        throw new Error(data.error || "Upload failed")
+      }
+
+      const uploadData = await uploadResponse.json()
+      setUploadProgress(100)
+
+      // Store pending file - don't save to database yet
+      setPendingFile({
+        file,
+        pathname: uploadData.pathname,
+        url: uploadData.url,
+      })
+
+      setSuccess("File uploaded! Fill in the details and click Save.")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed")
+    } finally {
+      setUploading(false)
+      setUploadProgress(0)
+    }
+  }
+
+  // Step 2: Save vaccination record to database
+  const saveVaccination = async () => {
+    if (!pendingFile) {
+      setError("Please upload a file first")
+      return
+    }
     if (!selectedPetId) {
-      setError("Please select a pet first")
+      setError("Please select a pet")
       return
     }
     if (!vaccineName) {
@@ -86,33 +148,11 @@ export default function VaccinesPage() {
       return
     }
 
-    setUploading(true)
+    setSaving(true)
     setError(null)
-    setUploadProgress(10)
+    setSuccess(null)
 
     try {
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append("type", "vaccination")
-      formData.append("petId", selectedPetId)
-
-      setUploadProgress(30)
-
-      const uploadResponse = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      })
-
-      setUploadProgress(70)
-
-      if (!uploadResponse.ok) {
-        const data = await uploadResponse.json()
-        throw new Error(data.error || "Upload failed")
-      }
-
-      const uploadData = await uploadResponse.json()
-
-      // Save vaccination record to database
       const saveResponse = await fetch("/api/vaccinations/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -122,8 +162,8 @@ export default function VaccinesPage() {
           vaccinationDate,
           expiryDate,
           notes,
-          filePathname: uploadData.pathname,
-          fileUrl: uploadData.url,
+          filePathname: pendingFile.pathname,
+          fileUrl: pendingFile.url,
         }),
       })
 
@@ -132,8 +172,6 @@ export default function VaccinesPage() {
         throw new Error(data.error || "Failed to save vaccination record")
       }
 
-      setUploadProgress(100)
-
       const petName = pets.find(p => p.id === selectedPetId)?.name || "Unknown"
       const newVaccination: UploadedVaccination = {
         id: Date.now().toString(),
@@ -141,28 +179,37 @@ export default function VaccinesPage() {
         vaccineName,
         vaccinationDate,
         expiryDate,
-        fileName: file.name,
+        fileName: pendingFile.file.name,
         uploadedAt: new Date(),
-        url: uploadData.url,
-        pathname: uploadData.pathname,
+        url: pendingFile.url,
+        pathname: pendingFile.pathname,
       }
 
       setVaccinations(prev => [newVaccination, ...prev])
       
       // Reset form
+      setPendingFile(null)
       setVaccineName("")
       setVaccinationDate("")
       setExpiryDate("")
       setNotes("")
+      setSuccess("Vaccination record saved successfully!")
       
       if (fileInputRef.current) {
         fileInputRef.current.value = ""
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed")
+      setError(err instanceof Error ? err.message : "Save failed")
     } finally {
-      setUploading(false)
-      setUploadProgress(0)
+      setSaving(false)
+    }
+  }
+
+  const clearPendingFile = () => {
+    setPendingFile(null)
+    setSuccess(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
     }
   }
 
@@ -375,6 +422,41 @@ export default function VaccinesPage() {
               )}
             </div>
 
+            {/* Pending File Display */}
+            {pendingFile && (
+              <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-5 h-5 text-primary" />
+                    <span className="font-medium text-foreground">File Ready</span>
+                  </div>
+                  <button 
+                    onClick={clearPendingFile}
+                    className="p-1 hover:bg-primary/20 rounded"
+                  >
+                    <X className="w-4 h-4 text-primary" />
+                  </button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {pendingFile.file.name} ({(pendingFile.file.size / 1024).toFixed(1)} KB)
+                </p>
+              </div>
+            )}
+
+            {/* Success Message */}
+            {success && (
+              <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-500" />
+                <span className="text-sm text-green-600 flex-1">{success}</span>
+                <button 
+                  onClick={() => setSuccess(null)}
+                  className="p-1 hover:bg-green-500/20 rounded"
+                >
+                  <X className="w-3 h-3 text-green-500" />
+                </button>
+              </div>
+            )}
+
             {/* Error Message */}
             {error && (
               <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2">
@@ -388,6 +470,26 @@ export default function VaccinesPage() {
                 </button>
               </div>
             )}
+
+            {/* Save Button */}
+            <Button 
+              onClick={saveVaccination}
+              disabled={!pendingFile || saving || uploading}
+              className="w-full"
+              size="lg"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Vaccination Record
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
 

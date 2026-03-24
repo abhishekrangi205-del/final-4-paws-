@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Plus, FileText, Calendar, AlertCircle, Loader2, Syringe } from "lucide-react"
+import { ArrowLeft, Plus, FileText, Calendar, AlertCircle, Loader2, Syringe, Trash2 } from "lucide-react"
 import Link from "next/link"
 
 type Vaccination = {
@@ -35,6 +35,7 @@ export default function MyPetsPage() {
   const [pets, setPets] = useState<Pet[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedPetId, setExpandedPetId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchPets = async () => {
@@ -74,6 +75,23 @@ export default function MyPetsPage() {
   const isVaccineExpired = (expiryDate?: string) => {
     if (!expiryDate) return false
     return new Date(expiryDate) < new Date()
+  }
+
+  const handleDeletePet = async (petId: string, petName: string) => {
+    if (confirm(`Delete ${petName}?`)) {
+      try {
+        const res = await fetch(`/api/pets/${petId}`, { method: "DELETE" })
+        if (res.ok) {
+          setPets(pets.filter(p => p.id !== petId))
+          setError(null)
+        } else {
+          const errorData = await res.json()
+          setError(errorData.error || "Failed to delete pet")
+        }
+      } catch (err) {
+        setError("Failed to delete pet. Please try again.")
+      }
+    }
   }
 
   const getVaccineStatus = (vaccine: Vaccination) => {
@@ -133,6 +151,12 @@ export default function MyPetsPage() {
           </Card>
         ) : (
           <div className="space-y-4">
+            {error && (
+              <div className="p-4 bg-destructive/10 text-destructive rounded-lg flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                {error}
+              </div>
+            )}
             {pets.map((pet) => (
               <Card key={pet.id} className="overflow-hidden">
                 <CardHeader 
@@ -161,19 +185,32 @@ export default function MyPetsPage() {
                         {pet.spayed_neutered && <span>Spayed/Neutered</span>}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm text-muted-foreground">
-                        {pet.vaccinations && pet.vaccinations.length > 0 ? (
-                          <>
-                            <p className="font-medium text-foreground">{pet.vaccinations.length}</p>
-                            <p>Vaccination{pet.vaccinations.length !== 1 ? "s" : ""}</p>
-                          </>
-                        ) : (
-                          <>
-                            <p className="font-medium text-foreground">0</p>
-                            <p>Vaccinations</p>
-                          </>
-                        )}
+                    <div className="flex flex-col items-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeletePet(pet.id, pet.name)
+                        }}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                      <div className="text-right">
+                        <div className="text-sm text-muted-foreground">
+                          {pet.vaccinations && pet.vaccinations.length > 0 ? (
+                            <>
+                              <p className="font-medium text-foreground">{pet.vaccinations.length}</p>
+                              <p>Vaccination{pet.vaccinations.length !== 1 ? "s" : ""}</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="font-medium text-foreground">0</p>
+                              <p>Vaccinations</p>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
